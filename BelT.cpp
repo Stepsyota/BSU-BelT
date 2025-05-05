@@ -45,11 +45,6 @@ std::vector<unsigned int> BelT::ENCRYPTION(std::vector<unsigned int> WORD) {
     Y[1] = WordToNumToWord(d);
     Y[2] = WordToNumToWord(a);
     Y[3] = WordToNumToWord(c);
-
-    //for (int i = 0; i < 4; ++i) {
-    //    std::cout << std::hex << Y[i] << '\t';
-    //}
-    //std::cout << std::endl;
     return Y;
 }
 
