@@ -7,7 +7,9 @@
 class BelT {
 	public:
 		BelT(std::string);
-		unsigned int ENCRYPTION();
+		unsigned int ENCRYPTION(unsigned int[]);
+		unsigned int ENCRYPTION_ECB(std::string);
+		unsigned int ENCRYPTION_GCM(std::string);
 	
 	private:
 		unsigned int G_func(unsigned int, unsigned int);

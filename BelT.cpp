@@ -19,17 +19,15 @@ BelT::BelT(std::string key_str){
     }
 }
 
-unsigned int BelT::ENCRYPTION() {
-    unsigned int WORD[4]{ 0xB194BAC8, 0x0A08F53B, 0x366D008E, 0x584A5DE4 };
-    unsigned int NUMS[4]{};
-    for (int i = 0; i < 4; ++i) {
-        NUMS[i] = WordToNum(WORD[i]);
-    }
-
-    unsigned int a = NUMS[0];
-    unsigned int b = NUMS[1];
-    unsigned int c = NUMS[2];
-    unsigned int d = NUMS[3];
+unsigned int BelT::ENCRYPTION(unsigned int WORD[]) {
+    unsigned int a = WordToNum(WORD[0]);
+    unsigned int b = WordToNum(WORD[1]);
+    unsigned int c = WordToNum(WORD[2]);
+    unsigned int d = WordToNum(WORD[3]);
+    //unsigned int a = WORD[0];
+    //unsigned int b = WORD[1];
+    //unsigned int c = WORD[2];
+    //unsigned int d = WORD[3];
     unsigned int e;
 
     for (unsigned int i = 1; i < 9; ++i) {
@@ -65,7 +63,7 @@ unsigned int BelT::G_func(unsigned int word, unsigned int r) {
         PARTS[i] = H_func(PARTS[i]);
     }
     unsigned int result = Connect8to32(PARTS);
-    delete[] PARTS;
+    delete[] PARTS; // del
 
     for (int i = 0; i < r; ++i) {
         result = RotHi(result);
@@ -110,7 +108,7 @@ unsigned int BelT::H_func(unsigned int word) {
 }
 
 uint8_t* BelT::Split32to8(unsigned int word) {
-    uint8_t* result = new uint8_t[4];
+    uint8_t* result = new uint8_t[4]; // new
     for (int i = 0; i < 4; ++i) {
         result[i] = (word >> (32 - (i + 1) * 8)) & 0xFF;
     }
@@ -120,7 +118,7 @@ uint8_t* BelT::Split32to8(unsigned int word) {
 unsigned int BelT::Connect8to32(uint8_t parts[]) {
     unsigned int result = 0;
     for (int i = 0; i < 4; ++i) {
-        result = result ^ (parts[i] << (32 - (i + 1) * 8));
+        result = result ^ (parts[i] << (32 - (i + 1) * 8)); // ^
     }
     return result;
 }
@@ -141,4 +139,13 @@ unsigned int BelT::NumToWord(unsigned int word) {
     }
     word = tetr[0] + (tetr[1] << 8) + (tetr[2] << 16) + (tetr[3] << 24);
     return word;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+unsigned int ENCRYPTION_GCM(std::string word) {
+    return 1;
+}
+
+unsigned int BelT::ENCRYPTION_ECB(std::string word) {
+    return 1;
 }
