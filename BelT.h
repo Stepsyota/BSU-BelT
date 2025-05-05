@@ -11,6 +11,9 @@ class BelT {
 		std::vector<unsigned int> ENCRYPTION(std::vector<unsigned int>);
 		std::string ENCRYPTION_ECB(std::string);
 		std::string ENCRYPTION_GCM(std::string);
+
+		std::vector<unsigned int> DECRYPTION(std::vector<unsigned int>);
+		std::string DECRYPTION_ECB(std::string);
 	
 	private:
 		unsigned int WordToNumToWord(unsigned int word);

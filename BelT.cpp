@@ -19,11 +19,11 @@ BelT::BelT(std::string key_str){
     }
 }
 
-std::vector<unsigned int> BelT::ENCRYPTION(std::vector<unsigned int> WORD) {
-    unsigned int a = WordToNumToWord(WORD[0]);
-    unsigned int b = WordToNumToWord(WORD[1]);
-    unsigned int c = WordToNumToWord(WORD[2]);
-    unsigned int d = WordToNumToWord(WORD[3]);
+std::vector<unsigned int> BelT::ENCRYPTION(std::vector<unsigned int> X) {
+    unsigned int a = WordToNumToWord(X[0]);
+    unsigned int b = WordToNumToWord(X[1]);
+    unsigned int c = WordToNumToWord(X[2]);
+    unsigned int d = WordToNumToWord(X[3]);
     unsigned int e;
 
     for (unsigned int i = 1; i < 9; ++i) {
@@ -46,6 +46,35 @@ std::vector<unsigned int> BelT::ENCRYPTION(std::vector<unsigned int> WORD) {
     Y[2] = WordToNumToWord(a);
     Y[3] = WordToNumToWord(c);
     return Y;
+}
+
+std::vector<unsigned int> BelT::DECRYPTION(std::vector<unsigned int> Y) {
+    unsigned int a = WordToNumToWord(Y[0]);
+    unsigned int b = WordToNumToWord(Y[1]);
+    unsigned int c = WordToNumToWord(Y[2]);
+    unsigned int d = WordToNumToWord(Y[3]);
+    unsigned int e;
+
+    for (unsigned int i = 8; i > 0; --i) {
+        b = b ^ G_func(a + ROUND_KEY[7 * i - 1], 5);
+        c = c ^ G_func(d + ROUND_KEY[7 * i - 2], 21);
+        a = a - G_func(b + ROUND_KEY[7 * i - 3], 13);
+        e = G_func(b + c + ROUND_KEY[7 * i - 4], 21) ^ i;
+        b = b + e;
+        c = c - e;
+        d = d + G_func(c + ROUND_KEY[7 * i - 5], 13);
+        b = b ^ G_func(a + ROUND_KEY[7 * i - 6], 21);
+        c = c ^ G_func(d + ROUND_KEY[7 * i - 7], 5);
+        std::swap(a, b);
+        std::swap(c, d);
+        std::swap(a, d);
+    }
+    std::vector<unsigned int> X(4);
+    X[0] = WordToNumToWord(c);
+    X[1] = WordToNumToWord(a);
+    X[2] = WordToNumToWord(d);
+    X[3] = WordToNumToWord(b);
+    return X;
 }
 
 
@@ -71,6 +100,31 @@ std::string BelT::ENCRYPTION_ECB(std::string word) {
                 break;
             }
             RESULT += Connect32To128(ENCRYPTION(Split128To32(PARTS[i])));
+    }
+    return RESULT;
+}
+
+std::string BelT::DECRYPTION_ECB(std::string word_encrypted) {
+    if (word_encrypted.size() < 16) {
+        std::cout << "Invalid size\n";
+        exit(-3);
+    }
+    std::vector<std::string> PARTS = SplitTo128(word_encrypted);
+    int num_blocks = (word_encrypted.size() + 15) / 16;  // the number of blocks rounded up
+    std::string RESULT;
+    int length_last_block = word_encrypted.size() % 16;
+    for (int i = 0; i < num_blocks; ++i) {
+        if (length_last_block != 0 && i == num_blocks - 2) {
+            std::string WORD;
+            WORD = Connect32To128(DECRYPTION(Split128To32(PARTS[i])));
+            int length_to_add = 16 - length_last_block;
+            std::string r = WORD.substr(length_last_block, length_to_add);
+            WORD = WORD.substr(0, length_last_block); //X_N
+            RESULT += Connect32To128(DECRYPTION(Split128To32(PARTS[i + 1] + r))); // X_N-1
+            RESULT += WORD;
+            break;
+        }
+        RESULT += Connect32To128(DECRYPTION(Split128To32(PARTS[i])));
     }
     return RESULT;
 }
