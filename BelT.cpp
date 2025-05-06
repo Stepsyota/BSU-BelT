@@ -1,32 +1,61 @@
 ﻿#include "BelT.h"
 
-BelT::BelT(std::string key_str){
-    if (key_str.size() != 32) {
-        std::cout << "Invalid key length\n";
-        exit(-1);
-    }
-    unsigned int KEY[8]{};
-    for (int i = 0; i < 8; ++i) {
-        unsigned int val = 0;
-        for (int j = 0; j < 4; ++j) {
-            val |= (static_cast<unsigned char>(key_str[4 * i + j])) << (8 * (3 - j));
-        }
-        KEY[i] = WordToNumToWord(val);
+BelT::BelT(const std::string& key_str){
+    // Check size of key > 256 bit
+    if (key_str.size() > 32) {
+        throw std::invalid_argument("Incorrect key size");
     }
 
-    for (int i = 0; i < 56; ++i) {
+    std::vector<uint32_t> KEY = KeyToNum(key_str);
+    KeyExpansion(KEY);
+
+    SetRoundKeys(KEY);
+}
+
+std::vector<uint32_t> BelT::KeyToNum(const std::string& key_str) {
+    if (key_str.size() != 16 && key_str.size() != 24 && key_str.size() != 32) {
+        throw std::invalid_argument("Incorrect key size");
+    }
+    std::vector<uint32_t> KEY(key_str.size() / 4);
+    KEY.reserve(8);
+
+    for (uint8_t i = 0; i < KEY.size(); ++i) {
+        KEY[i] = WordToNumToWord(StrToUint(key_str, i));
+    }
+    return KEY;
+    
+}
+void BelT::KeyExpansion(std::vector<uint32_t>& KEY) {
+    if (KEY.size() == 8) {
+    }
+    else if (KEY.size() == 6) {
+        KEY.push_back(KEY[0] ^ KEY[1] ^ KEY[2]);
+        KEY.push_back(KEY[3] ^ KEY[4] ^ KEY[5]);
+    }
+    else if (KEY.size() == 4) {
+        KEY.push_back(KEY[0]);
+        KEY.push_back(KEY[1]);
+        KEY.push_back(KEY[2]);
+        KEY.push_back(KEY[3]);
+    }
+}
+void BelT::SetRoundKeys(const std::vector<uint32_t>& KEY) {
+    for (uint8_t i = 0; i < 56; ++i) {
         this->ROUND_KEY[i] = KEY[i % 8];
     }
 }
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-std::vector<unsigned int> BelT::ENCRYPTION(std::vector<unsigned int> X) {
-    unsigned int a = WordToNumToWord(X[0]);
-    unsigned int b = WordToNumToWord(X[1]);
-    unsigned int c = WordToNumToWord(X[2]);
-    unsigned int d = WordToNumToWord(X[3]);
-    unsigned int e;
+std::string BelT::ENCRYPTION(const std::string& X_str) {
+    std::vector<uint32_t> X = Split128To32(X_str);
 
-    for (unsigned int i = 1; i < 9; ++i) {
+    uint32_t a = WordToNumToWord(X[0]);
+    uint32_t b = WordToNumToWord(X[1]);
+    uint32_t c = WordToNumToWord(X[2]);
+    uint32_t d = WordToNumToWord(X[3]);
+    uint32_t e;
+
+    for (uint8_t i = 1; i < 9; ++i) {
         b = b ^ G_func(a + ROUND_KEY[7 * i - 7], 5);
         c = c ^ G_func(d + ROUND_KEY[7 * i - 6], 21);
         a = a - G_func(b + ROUND_KEY[7 * i - 5], 13);
@@ -40,22 +69,51 @@ std::vector<unsigned int> BelT::ENCRYPTION(std::vector<unsigned int> X) {
         std::swap(c, d);
         std::swap(b, c);
     }
-    std::vector<unsigned int> Y(4);
+    std::vector<uint32_t> Y(4);
     Y[0] = WordToNumToWord(b);
     Y[1] = WordToNumToWord(d);
     Y[2] = WordToNumToWord(a);
     Y[3] = WordToNumToWord(c);
-    return Y;
+    std::string Y_str = Connect32To128(Y);
+    return Y_str;
+}
+std::string BelT::ENCRYPTION_ECB(const std::string& text) {
+    // Check size of text >= 128 bit
+    if (text.size() < 16) {
+        throw std::invalid_argument("Incorrect text size");
+    }
+
+    std::vector<std::string> blocks_128b = SplitTo128(text);
+
+    uint32_t num_of_blocks = blocks_128b.size();
+    uint8_t length_last_block = text.size() % 16;
+
+    std::string text_encrypted;
+    for (uint32_t i = 0; i < num_of_blocks; ++i) {
+        if (length_last_block != 0 && i == num_of_blocks - 2) {
+            std::string enc_last_block = ENCRYPTION(blocks_128b[i]);
+            std::string r = enc_last_block.substr(length_last_block, 16 - length_last_block);
+            enc_last_block = enc_last_block.substr(0, length_last_block);
+
+            text_encrypted += ENCRYPTION(blocks_128b[i + 1] + r);
+            text_encrypted += enc_last_block;
+            break;
+        }
+        text_encrypted += ENCRYPTION(blocks_128b[i]);
+    }
+    return text_encrypted;
 }
 
-std::vector<unsigned int> BelT::DECRYPTION(std::vector<unsigned int> Y) {
-    unsigned int a = WordToNumToWord(Y[0]);
-    unsigned int b = WordToNumToWord(Y[1]);
-    unsigned int c = WordToNumToWord(Y[2]);
-    unsigned int d = WordToNumToWord(Y[3]);
-    unsigned int e;
+std::string BelT::DECRYPTION(const std::string& Y_str) {
+    std::vector<uint32_t> Y = Split128To32(Y_str);
 
-    for (unsigned int i = 8; i > 0; --i) {
+    uint32_t a = WordToNumToWord(Y[0]);
+    uint32_t b = WordToNumToWord(Y[1]);
+    uint32_t c = WordToNumToWord(Y[2]);
+    uint32_t d = WordToNumToWord(Y[3]);
+    uint32_t e;
+
+    for (uint8_t i = 8; i > 0; --i) {
         b = b ^ G_func(a + ROUND_KEY[7 * i - 1], 5);
         c = c ^ G_func(d + ROUND_KEY[7 * i - 2], 21);
         a = a - G_func(b + ROUND_KEY[7 * i - 3], 13);
@@ -69,108 +127,90 @@ std::vector<unsigned int> BelT::DECRYPTION(std::vector<unsigned int> Y) {
         std::swap(c, d);
         std::swap(a, d);
     }
-    std::vector<unsigned int> X(4);
+    std::vector<uint32_t> X(4);
     X[0] = WordToNumToWord(c);
     X[1] = WordToNumToWord(a);
     X[2] = WordToNumToWord(d);
     X[3] = WordToNumToWord(b);
-    return X;
+
+    std::string X_str = Connect32To128(X);
+    return X_str;
 }
-
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-std::string BelT::ENCRYPTION_ECB(std::string word) {
-    if (word.size() < 16) {
-        std::cout << "Invalid size\n";
-        exit(-2);
+std::string BelT::DECRYPTION_ECB(const std::string& text_encrypted) {
+    // Check size of text_encrypted >= 128 bit
+    if (text_encrypted.size() < 16) {
+        throw std::invalid_argument("Incorrect ciphertext size");
     }
-    std::vector<std::string> PARTS = SplitTo128(word);
-    int num_blocks = (word.size() + 15) / 16;  // the number of blocks rounded up
-    std::string RESULT;
-    int length_last_block = word.size() % 16;
-    for (int i = 0; i < num_blocks; ++i) {
-            if (length_last_block != 0 && i == num_blocks - 2) {
-                std::string WORD;
-                WORD = Connect32To128(ENCRYPTION(Split128To32(PARTS[i])));
-                int length_to_add = 16 - length_last_block;
-                std::string r = WORD.substr(length_last_block, length_to_add);
-                WORD = WORD.substr(0, length_last_block); //X_N
-                RESULT += Connect32To128(ENCRYPTION(Split128To32(PARTS[i + 1] + r))); // X_N-1
-                RESULT += WORD;
-                break;
-            }
-            RESULT += Connect32To128(ENCRYPTION(Split128To32(PARTS[i])));
-    }
-    return RESULT;
-}
 
-std::string BelT::DECRYPTION_ECB(std::string word_encrypted) {
-    if (word_encrypted.size() < 16) {
-        std::cout << "Invalid size\n";
-        exit(-3);
-    }
-    std::vector<std::string> PARTS = SplitTo128(word_encrypted);
-    int num_blocks = (word_encrypted.size() + 15) / 16;  // the number of blocks rounded up
-    std::string RESULT;
-    int length_last_block = word_encrypted.size() % 16;
-    for (int i = 0; i < num_blocks; ++i) {
+    std::vector<std::string> blocks_128b = SplitTo128(text_encrypted);
+
+    uint32_t num_blocks = blocks_128b.size();
+    uint8_t length_last_block = text_encrypted.size() % 16;
+
+    std::string text;
+    for (uint32_t i = 0; i < num_blocks; ++i) {
         if (length_last_block != 0 && i == num_blocks - 2) {
-            std::string WORD;
-            WORD = Connect32To128(DECRYPTION(Split128To32(PARTS[i])));
-            int length_to_add = 16 - length_last_block;
-            std::string r = WORD.substr(length_last_block, length_to_add);
-            WORD = WORD.substr(0, length_last_block); //X_N
-            RESULT += Connect32To128(DECRYPTION(Split128To32(PARTS[i + 1] + r))); // X_N-1
-            RESULT += WORD;
+            std::string enc_last_block = DECRYPTION(blocks_128b[i]);
+            std::string r = enc_last_block.substr(length_last_block, 16 - length_last_block);
+            enc_last_block = enc_last_block.substr(0, length_last_block);
+
+            text += DECRYPTION(blocks_128b[i + 1] + r);
+            text += enc_last_block;
             break;
         }
-        RESULT += Connect32To128(DECRYPTION(Split128To32(PARTS[i])));
+        text += DECRYPTION(blocks_128b[i]);
     }
-    return RESULT;
+    return text;
 }
 
-std::string ENCRYPTION_GCM(std::string word) {
-    return "";
-}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-unsigned int BelT::WordToNumToWord(unsigned int word) {
-    unsigned int tetr[4]{};
-    for (int i = 0; i < 4; ++i) {
-        tetr[i] = (word >> (24 - i * 8)) & 0b11111111;
+uint32_t BelT::WordToNumToWord(uint32_t word) {
+    uint32_t byte_parts[4]{};
+    for (uint8_t i = 0; i < 4; ++i) {
+        byte_parts[i] = (word >> (24 - i * 8)) & 0b11111111;
     }
-    word = tetr[0] + (tetr[1] << 8) + (tetr[2] << 16) + (tetr[3] << 24);
+    word = byte_parts[0] + (byte_parts[1] << 8) + (byte_parts[2] << 16) + (byte_parts[3] << 24);
     return word;
 }
+uint32_t BelT::StrToUint(const std::string& str, uint32_t start_index) {
+    uint32_t block_32b = 0;
+    for (uint8_t j = 0; j < 4; ++j) {
+        block_32b |= static_cast<unsigned char>(str[4 * start_index + j]) << (8 * (3 - j));
+    }
+    return block_32b;
+}
 
-unsigned int BelT::ShLo(unsigned int word) {
+uint32_t BelT::ShLo(uint32_t word) {
     return word >> 1;
 }
-unsigned int BelT::ShHi(unsigned int word) {
+uint32_t BelT::ShHi(uint32_t word) {
     return word << 1;
 }
-unsigned int BelT::RotHi(unsigned int word) {
-    unsigned int result_sh_lo = word;
+uint32_t BelT::RotHi(uint32_t word) {
+    uint32_t result_sh_lo = word;
     for (int i = 0; i < 31; ++i) {
         result_sh_lo = ShLo(result_sh_lo);
     }
     return ShHi(word) ^ result_sh_lo;
 }
 
-unsigned int BelT::G_func(unsigned int word, unsigned int r) {
-    std::vector<uint8_t> PARTS = Split32To8(word);
+uint32_t BelT::G_func(uint32_t word, uint8_t r) {
+    std::vector<uint8_t> PARTS_8b = Split32To8(word);
 
     for (int i = 0; i < 4; ++i) {
-        PARTS[i] = H_func(PARTS[i]);
+        PARTS_8b[i] = H_func(PARTS_8b[i]);
     }
-    unsigned int result = Connect8To32(PARTS);
+
+    uint32_t result = Connect8To32(PARTS_8b);
 
     for (int i = 0; i < r; ++i) {
         result = RotHi(result);
     }
+
     return result;
 }
-unsigned int BelT::H_func(unsigned int word) {
-    unsigned int H_box[16][16] = {
+uint32_t BelT::H_func(uint8_t word) {
+    uint32_t H_box[16][16] = {
     {0xB1, 0x94, 0xBA, 0xC8, 0x0A, 0x08, 0xF5, 0x3B, 0x36, 0x6D, 0x00, 0x8E, 0x58, 0x4A, 0x5D, 0xE4},
     {0x85, 0x04, 0xFA, 0x9D, 0x1B, 0xB6, 0xC7, 0xAC, 0x25, 0x2E, 0x72, 0xC2, 0x02, 0xFD, 0xCE, 0x0D},
     {0x5B, 0xE3, 0xD6, 0x12, 0x17, 0xB9, 0x61, 0x81, 0xFE, 0x67, 0x86, 0xAD, 0x71, 0x6B, 0x89, 0x0B},
@@ -191,46 +231,45 @@ unsigned int BelT::H_func(unsigned int word) {
     return H_box[word / 16][word % 16];
 }
 
-std::vector<std::string> BelT::SplitTo128(std::string word) {
-    int num_blocks = (word.size() + 15) / 16; // the number of blocks rounded up
-    std::vector<std::string> PARTS(num_blocks);
+std::vector<std::string> BelT::SplitTo128(const std::string& text) {
+    uint32_t num_blocks = (text.size() + 15) / 16; // the number of blocks rounded up
+    std::vector<std::string> blocks_128b(num_blocks);
 
-    for (int i = 0; i < num_blocks; ++i) {
-        int start_part = 16 * i;
-        int size_block = std::min(16, static_cast<int>(word.size() - (start_part)));
-        PARTS[i] = word.substr(start_part, size_block);
+    for (uint32_t i = 0; i < num_blocks; ++i) {
+        uint32_t start_part = 16 * i;
+        uint8_t size_block = std::min(16, static_cast<int>(text.size() - (start_part)));
+        blocks_128b[i] = text.substr(start_part, size_block);
     }
-    return PARTS;
+    return blocks_128b;
 }
-std::vector<unsigned int> BelT::Split128To32(std::string part) {
-    std::vector<unsigned int> WORD(4);
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            WORD[i] |= static_cast<unsigned char>(part[4 * i + j]) << (8 * (3 - j)); // |
+std::vector<uint32_t> BelT::Split128To32(const std::string& block_128b) {
+    std::vector<uint32_t> blocks_32b(4);
+    for (uint8_t i = 0; i < 4; ++i) {
+        blocks_32b[i] = StrToUint(block_128b, i);
+    }
+    return blocks_32b;
+}
+std::vector<uint8_t> BelT::Split32To8(uint32_t block_32b) {
+    std::vector<uint8_t> blocks_8b(4);
+    for (uint8_t i = 0; i < 4; ++i) {
+        blocks_8b[i] = (block_32b >> (32 - (i + 1) * 8)) & 0xFF;
+    }
+    return blocks_8b;
+}
+
+uint32_t BelT::Connect8To32(const std::vector<uint8_t>& blocks_8b) {
+    uint32_t block_32b = 0;
+    for (uint32_t i = 0; i < 4; ++i) {
+        block_32b |= blocks_8b[i] << (32 - (i + 1) * 8);
+    }
+    return block_32b;
+}
+std::string  BelT::Connect32To128(const std::vector<uint32_t>& blocks_32b) {
+    std::string block_128b;
+    for (uint8_t i = 0; i < 4; ++i) {
+        for (int8_t j = 3; j >= 0; --j) {
+            block_128b += static_cast<char>((blocks_32b[i] >> (8 * j)) & 0xFF);
         }
     }
-    return WORD;
-}
-std::vector<uint8_t> BelT::Split32To8(unsigned int word) {
-    std::vector<uint8_t> result(4);
-    for (int i = 0; i < 4; ++i) {
-        result[i] = (word >> (32 - (i + 1) * 8)) & 0xFF;
-    }
-    return result;
-}
-unsigned int BelT::Connect8To32(std::vector<uint8_t> parts) {
-    unsigned int result = 0;
-    for (int i = 0; i < 4; ++i) {
-        result |= parts[i] << (32 - (i + 1) * 8);
-    }
-    return result;
-}
-std::string  BelT::Connect32To128(std::vector<unsigned int> WORD) {
-    std::string part;
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 3; j >= 0; --j) {
-            part += static_cast<char>((WORD[i] >> (8 * j)) & 0xFF); //
-        }
-    }
-    return part;
+    return block_128b;
 }
