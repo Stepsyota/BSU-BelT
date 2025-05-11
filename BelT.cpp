@@ -46,22 +46,24 @@ void BelT::SetRoundKeys(const std::vector<uint32_t>& KEY) {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-std::string BelT::encrypt(const std::string& plaintext) {
+std::string BelT::encrypt(const std::string& plaintext, const std::string& iv) {
     switch (mode) {
     case CipherMode::ECB: return ENCRYPTION_ECB(plaintext);
+    case CipherMode::CTR: if (iv.empty()) throw std::invalid_argument("CTR mode requires IV"); return ENCRYPTION_CTR(plaintext, iv);
     case CipherMode::GCM: break;
     default:  throw std::runtime_error("Unsupported cipher mode");  
     }
 }
-std::string BelT::decrypt(const std::string& plaintext) {
+std::string BelT::decrypt(const std::string& plaintext, const std::string& iv) {
     switch (mode) {
     case CipherMode::ECB: return DECRYPTION_ECB(plaintext);
+    case CipherMode::CTR: if (iv.empty()) throw std::invalid_argument("CTR mode requires IV"); return DECRYPTION_CTR(plaintext, iv);
     case CipherMode::GCM: break;
     default:  throw std::runtime_error("Unsupported cipher mode");
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-std::string BelT::ENCRYPTION(const std::string& X_str) {
+std::string BelT::ENCRYPT_ONE_BLOCK(const std::string& X_str) {
     std::vector<uint32_t> X = Split128To32(X_str);
 
     uint32_t a = WordToNumToWord(X[0]);
@@ -106,20 +108,62 @@ std::string BelT::ENCRYPTION_ECB(const std::string& text) {
     std::string text_encrypted;
     for (uint32_t i = 0; i < num_of_blocks; ++i) {
         if (length_last_block != 0 && i == num_of_blocks - 2) {
-            std::string enc_last_block = ENCRYPTION(blocks_128b[i]);
+            std::string enc_last_block = ENCRYPT_ONE_BLOCK(blocks_128b[i]);
             std::string r = enc_last_block.substr(length_last_block, 16 - length_last_block);
             enc_last_block = enc_last_block.substr(0, length_last_block);
 
-            text_encrypted += ENCRYPTION(blocks_128b[i + 1] + r);
+            text_encrypted += ENCRYPT_ONE_BLOCK(blocks_128b[i + 1] + r);
             text_encrypted += enc_last_block;
             break;
         }
-        text_encrypted += ENCRYPTION(blocks_128b[i]);
+        text_encrypted += ENCRYPT_ONE_BLOCK(blocks_128b[i]);
     }
     return text_encrypted;
 }
+std::string BelT::ENCRYPTION_CTR(const std::string& text, const std::string& iv) {
+    // Проверка размера IV (синхропосылки)
+    if (iv.size() != 16) {
+        throw std::invalid_argument("IV must be 16 bytes (128 bits)");
+    }
 
-std::string BelT::DECRYPTION(const std::string& Y_str) {
+    // Разбиваем текст на блоки по 16 байт
+    std::vector<std::string> blocks = SplitTo128(text);
+    std::string result;
+
+    // Инициализируем s = belt-block(S, K)
+    std::string s = ENCRYPT_ONE_BLOCK(iv);
+
+    for (size_t i = 0; i < blocks.size(); ++i) {
+        // 1. s = s + 1 (инкремент 128-битного числа)
+        for (int j = 0; j <= 15; ++j) {
+            if (++s[j] != 0) break; // Учитываем перенос
+        }
+
+        // 2. Шифруем текущее значение s
+        std::string encrypted_s = ENCRYPT_ONE_BLOCK(s);
+
+        // 3. Берем нужное количество байт (|X_i|)
+        size_t block_size = blocks[i].size();
+        std::string keystream = encrypted_s.substr(0, block_size);
+
+        // 4. XOR с исходным блоком
+        std::string encrypted_block;
+        for (size_t j = 0; j < block_size; ++j) {
+            encrypted_block += blocks[i][j] ^ keystream[j];
+        }
+
+        result += encrypted_block;
+    }
+
+    return result;
+}
+
+// Для CTR режима шифрование и дешифрование одинаковы
+std::string BelT::DECRYPTION_CTR(const std::string& ciphertext, const std::string& iv) {
+    return ENCRYPTION_CTR(ciphertext, iv);
+}
+
+std::string BelT::DECRYPT_ONE_BLOCK(const std::string& Y_str) {
     std::vector<uint32_t> Y = Split128To32(Y_str);
 
     uint32_t a = WordToNumToWord(Y[0]);
@@ -165,15 +209,15 @@ std::string BelT::DECRYPTION_ECB(const std::string& text_encrypted) {
     std::string text;
     for (uint32_t i = 0; i < num_blocks; ++i) {
         if (length_last_block != 0 && i == num_blocks - 2) {
-            std::string enc_last_block = DECRYPTION(blocks_128b[i]);
+            std::string enc_last_block = DECRYPT_ONE_BLOCK(blocks_128b[i]);
             std::string r = enc_last_block.substr(length_last_block, 16 - length_last_block);
             enc_last_block = enc_last_block.substr(0, length_last_block);
 
-            text += DECRYPTION(blocks_128b[i + 1] + r);
+            text += DECRYPT_ONE_BLOCK(blocks_128b[i + 1] + r);
             text += enc_last_block;
             break;
         }
-        text += DECRYPTION(blocks_128b[i]);
+        text += DECRYPT_ONE_BLOCK(blocks_128b[i]);
     }
     return text;
 }
