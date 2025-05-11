@@ -8,13 +8,14 @@
 class BelT {
 	public:
 		BelT(const std::string&);
-		std::string ENCRYPTION(const std::string&);
-		std::string ENCRYPTION_ECB(const std::string&);
 
-		std::string DECRYPTION(const std::string&);
+		std::string ENCRYPTION_ECB(const std::string&);
 		std::string DECRYPTION_ECB(const std::string&);
 	
 	private:
+		std::string ENCRYPTION(const std::string&);
+		std::string DECRYPTION(const std::string&);
+
 		uint32_t WordToNumToWord(uint32_t);
 		uint32_t StrToUint(const std::string&, uint32_t);
 
