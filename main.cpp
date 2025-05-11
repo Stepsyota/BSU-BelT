@@ -1,9 +1,14 @@
 #include <iostream>
 #include "BelT.h"
 #include "tests.h"
+#include "BelT_modes.h"
 
 int main()
 {
-
+    //std::string key = "\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6"s;
+    //std::string text = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4"s;
+    //BelT enc(key, CipherMode::ECB);
+    //auto encrypted_text = enc.encrypt(text);
+    tests();
     return 0;
 }

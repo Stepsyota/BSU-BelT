@@ -4,17 +4,20 @@
 #include <bitset>
 #include <string>
 #include <vector>
+#include "BelT_modes.h"
 
 class BelT {
 	public:
-		BelT(const std::string&);
+		BelT(const std::string&, CipherMode);
 
-		std::string ENCRYPTION_ECB(const std::string&);
-		std::string DECRYPTION_ECB(const std::string&);
-	
+		std::string encrypt(const std::string&);
+		std::string decrypt(const std::string&);
 	private:
 		std::string ENCRYPTION(const std::string&);
+		std::string ENCRYPTION_ECB(const std::string&);
+
 		std::string DECRYPTION(const std::string&);
+		std::string DECRYPTION_ECB(const std::string&);
 
 		uint32_t WordToNumToWord(uint32_t);
 		uint32_t StrToUint(const std::string&, uint32_t);
@@ -38,4 +41,5 @@ class BelT {
 		void SetRoundKeys(const std::vector<uint32_t>&);
 
 		uint32_t ROUND_KEY[56]{};
+		CipherMode mode;
 };

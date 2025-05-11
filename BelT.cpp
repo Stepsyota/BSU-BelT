@@ -1,6 +1,6 @@
 ﻿#include "BelT.h"
 
-BelT::BelT(const std::string& key_str){
+BelT::BelT(const std::string& key_str, CipherMode mode){
     // Check size of key > 256 bit
     if (key_str.size() > 32) {
         throw std::invalid_argument("Incorrect key size");
@@ -10,6 +10,7 @@ BelT::BelT(const std::string& key_str){
     KeyExpansion(KEY);
 
     SetRoundKeys(KEY);
+    this->mode = mode;
 }
 
 std::vector<uint32_t> BelT::KeyToNum(const std::string& key_str) {
@@ -45,7 +46,21 @@ void BelT::SetRoundKeys(const std::vector<uint32_t>& KEY) {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+std::string BelT::encrypt(const std::string& plaintext) {
+    switch (mode) {
+    case CipherMode::ECB: return ENCRYPTION_ECB(plaintext);
+    case CipherMode::GCM: break;
+    default:  throw std::runtime_error("Unsupported cipher mode");  
+    }
+}
+std::string BelT::decrypt(const std::string& plaintext) {
+    switch (mode) {
+    case CipherMode::ECB: return DECRYPTION_ECB(plaintext);
+    case CipherMode::GCM: break;
+    default:  throw std::runtime_error("Unsupported cipher mode");
+    }
+}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 std::string BelT::ENCRYPTION(const std::string& X_str) {
     std::vector<uint32_t> X = Split128To32(X_str);
 
