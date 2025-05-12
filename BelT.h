@@ -9,17 +9,36 @@
 class BelT {
 	public:
 		BelT(const std::string&, CipherMode);
-
-		std::string encrypt(const std::string&, const std::string& = "");
-		std::string decrypt(const std::string&, const std::string& = "");
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		std::string encrypt(const std::string&, const std::string& = "", std::string* = nullptr);
+		std::string decrypt(const std::string&, const std::string& = "", const std::string& = "");
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		std::string belt_mac(const std::string&);
 	private:
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		struct GCM_Result {
+			std::string ciphertext;
+			std::string tag;
+		};
+		GCM_Result ENCRYPTION_GCM(const std::string&, const std::string&);
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		std::string ENCRYPT_ONE_BLOCK(const std::string&);
 		std::string ENCRYPTION_ECB(const std::string&);
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		std::string ENCRYPTION_CTR(const std::string&, const std::string&);
+
+		std::string phi1(const std::string&);
+		std::string phi2(const std::string&);
+		std::string psi(const std::string&);
+		std::string xor_strings(const std::string&, const std::string&);
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		std::string DECRYPT_ONE_BLOCK(const std::string&);
 		std::string DECRYPTION_ECB(const std::string&);
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		std::string DECRYPTION_CTR(const std::string&, const std::string&);
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		uint32_t WordToNumToWord(uint32_t);
 		uint32_t StrToUint(const std::string&, uint32_t);
@@ -41,6 +60,8 @@ class BelT {
 		std::vector<uint32_t> KeyToNum(const std::string&);
 		void KeyExpansion(std::vector<uint32_t>&);
 		void SetRoundKeys(const std::vector<uint32_t>&);
+
+
 
 		uint32_t ROUND_KEY[56]{};
 		CipherMode mode;

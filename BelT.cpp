@@ -46,21 +46,93 @@ void BelT::SetRoundKeys(const std::vector<uint32_t>& KEY) {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-std::string BelT::encrypt(const std::string& plaintext, const std::string& iv) {
+std::string BelT::encrypt(const std::string& plaintext, const std::string& iv, std::string* auth_tag) {
     switch (mode) {
     case CipherMode::ECB: return ENCRYPTION_ECB(plaintext);
     case CipherMode::CTR: if (iv.empty()) throw std::invalid_argument("CTR mode requires IV"); return ENCRYPTION_CTR(plaintext, iv);
-    case CipherMode::GCM: break;
+    //case CipherMode::MAC: return ENCRYPTION_MAC(plaintext);
+    case CipherMode::GCM: {
+        if (iv.empty()) throw std::invalid_argument("GCM mode requires IV");
+        GCM_Result result = ENCRYPTION_GCM(plaintext, iv);
+        //if (auth_tag) *auth_tag = result.tag;
+        return result.ciphertext;
+    }
     default:  throw std::runtime_error("Unsupported cipher mode");  
     }
 }
-std::string BelT::decrypt(const std::string& plaintext, const std::string& iv) {
+std::string BelT::decrypt(const std::string& plaintext, const std::string& iv, const std::string& auth_tag) {
     switch (mode) {
     case CipherMode::ECB: return DECRYPTION_ECB(plaintext);
-    case CipherMode::CTR: if (iv.empty()) throw std::invalid_argument("CTR mode requires IV"); return DECRYPTION_CTR(plaintext, iv);
-    case CipherMode::GCM: break;
-    default:  throw std::runtime_error("Unsupported cipher mode");
+    case CipherMode::CTR: { 
+        if (iv.empty()) throw std::invalid_argument("CTR mode requires IV");
+        return DECRYPTION_CTR(plaintext, iv); 
     }
+    case CipherMode::GCM: {
+        if (iv.empty()) throw std::invalid_argument("GCM mode requires IV");
+        GCM_Result result = ENCRYPTION_GCM(plaintext, iv);
+        //if (auth_tag) *auth_tag = result.tag;
+        return result.ciphertext;
+    }
+    default:  throw std::runtime_error("Unsupported cipher mode");
+    }   
+}
+
+BelT::GCM_Result BelT::ENCRYPTION_GCM(const std::string& plaintext, const std::string& nonce) {
+    GCM_Result x;
+    return x;
+}
+std::string BelT::phi1(const std::string& r) {
+    auto words = Split128To32(r);
+    uint32_t temp = words[0] ^ words[1];
+    return Connect32To128({ words[1], words[2], words[3], temp });
+}
+
+std::string BelT::phi2(const std::string& r) {
+    auto words = Split128To32(r);
+    uint32_t temp = words[0] ^ words[3];
+    return Connect32To128({ temp, words[0], words[1], words[2] });
+}
+
+// Дополнение для неполных блоков
+std::string BelT::psi(const std::string& u) {
+    if (u.size() == 16) return u;
+    std::string result = u;
+    result += '\x80';
+    result.append(15 - u.size(), '\x00');
+    return result;
+}
+
+// XOR для строк
+std::string BelT::xor_strings(const std::string& a, const std::string& b) {
+    std::string result;
+    for (size_t i = 0; i < a.size() && i < b.size(); ++i) {
+        result += a[i] ^ b[i];
+    }
+    return result;
+}
+
+// Реализация belt-mac
+std::string BelT::belt_mac(const std::string& data) {
+    std::vector<std::string> blocks = SplitTo128(data);
+
+    std::string s(16, '\x00');
+    std::string r = ENCRYPT_ONE_BLOCK(s);
+
+    for (size_t i = 0; i < blocks.size() - 1; ++i) {
+        s = xor_strings(s, blocks[i]);
+        s = ENCRYPT_ONE_BLOCK(s);
+    }
+
+    std::string last_block = blocks.back();
+    if (last_block.size() == 16) {
+        s = xor_strings(s, xor_strings(last_block, phi1(r)));
+    }
+    else {
+        s = xor_strings(s, xor_strings(psi(last_block), phi2(r)));
+    }
+
+    std::string tag = ENCRYPT_ONE_BLOCK(s);
+    return tag.substr(0, 8); // Первые 64 бита
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 std::string BelT::ENCRYPT_ONE_BLOCK(const std::string& X_str) {
