@@ -1,8 +1,14 @@
 ﻿#include "BelT.h"
 
+const uint8_t BLOCK_128_length = 16;
+const uint8_t KEY_128_length = 16;
+const uint8_t KEY_192_length = 24;
+const uint8_t KEY_256_length = 32;
+const uint8_t IV_128_length = 16;
+
 BelT::BelT(const std::string& key_str, CipherMode mode){
     // Check size of key > 256 bit
-    if (key_str.size() > 32) {
+    if (key_str.size() > KEY_256_length) {
         throw std::invalid_argument("Incorrect key size");
     }
 
@@ -14,7 +20,7 @@ BelT::BelT(const std::string& key_str, CipherMode mode){
 }
 
 std::vector<uint32_t> BelT::KeyToNum(const std::string& key_str) {
-    if (key_str.size() != 16 && key_str.size() != 24 && key_str.size() != 32) {
+    if (key_str.size() != KEY_128_length && key_str.size() != KEY_192_length && key_str.size() != KEY_256_length) {
         throw std::invalid_argument("Incorrect key size");
     }
     std::vector<uint32_t> KEY(key_str.size() / 4);
@@ -46,93 +52,59 @@ void BelT::SetRoundKeys(const std::vector<uint32_t>& KEY) {
     }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-std::string BelT::encrypt(const std::string& plaintext, const std::string& iv, std::string* auth_tag) {
+std::string BelT::encrypt(const std::string& plaintext, const std::string& iv) {
     switch (mode) {
-    case CipherMode::ECB: return ENCRYPTION_ECB(plaintext);
-    case CipherMode::CTR: if (iv.empty()) throw std::invalid_argument("CTR mode requires IV"); return ENCRYPTION_CTR(plaintext, iv);
-    //case CipherMode::MAC: return ENCRYPTION_MAC(plaintext);
-    case CipherMode::GCM: {
-        if (iv.empty()) throw std::invalid_argument("GCM mode requires IV");
-        GCM_Result result = ENCRYPTION_GCM(plaintext, iv);
-        //if (auth_tag) *auth_tag = result.tag;
-        return result.ciphertext;
+    case CipherMode::ECB: {
+        return ENCRYPTION_ECB(plaintext);
+    }
+    case CipherMode::CTR: {
+        if (iv.empty()) throw std::invalid_argument("CTR mode requires IV");
+        return ENCRYPTION_CTR(plaintext, iv);
+    }
+    case CipherMode::MAC: {
+        return ENCRYPTION_MAC(plaintext);
     }
     default:  throw std::runtime_error("Unsupported cipher mode");  
     }
 }
-std::string BelT::decrypt(const std::string& plaintext, const std::string& iv, const std::string& auth_tag) {
+std::string BelT::decrypt(const std::string& ciphertext, const std::string& iv) {
     switch (mode) {
-    case CipherMode::ECB: return DECRYPTION_ECB(plaintext);
+    case CipherMode::ECB: {
+        return DECRYPTION_ECB(ciphertext);
+    }
     case CipherMode::CTR: { 
         if (iv.empty()) throw std::invalid_argument("CTR mode requires IV");
-        return DECRYPTION_CTR(plaintext, iv); 
-    }
-    case CipherMode::GCM: {
-        if (iv.empty()) throw std::invalid_argument("GCM mode requires IV");
-        GCM_Result result = ENCRYPTION_GCM(plaintext, iv);
-        //if (auth_tag) *auth_tag = result.tag;
-        return result.ciphertext;
+        return DECRYPTION_CTR(ciphertext, iv);
     }
     default:  throw std::runtime_error("Unsupported cipher mode");
     }   
 }
 
-BelT::GCM_Result BelT::ENCRYPTION_GCM(const std::string& plaintext, const std::string& nonce) {
-    GCM_Result x;
-    return x;
-}
-std::string BelT::phi1(const std::string& r) {
-    auto words = Split128To32(r);
-    uint32_t temp = words[0] ^ words[1];
-    return Connect32To128({ words[1], words[2], words[3], temp });
+void BelT::encrypt_file(const std::string& input_filename, const std::string& output_filename, const std::string& iv) {
+    std::string plaintext = read_file(input_filename);
+    std::string ciphertext = encrypt(plaintext, iv);
+    write_to_file(output_filename, ciphertext);
 }
 
-std::string BelT::phi2(const std::string& r) {
-    auto words = Split128To32(r);
-    uint32_t temp = words[0] ^ words[3];
-    return Connect32To128({ temp, words[0], words[1], words[2] });
+void BelT::decrypt_file(const std::string& input_filename, const std::string& output_filename, const std::string& iv) {
+    std::string ciphertext = read_file(input_filename);
+    std::string plaintext = decrypt(ciphertext, iv);
+    write_to_file(output_filename, plaintext);
 }
 
-// Дополнение для неполных блоков
-std::string BelT::psi(const std::string& u) {
-    if (u.size() == 16) return u;
-    std::string result = u;
-    result += '\x80';
-    result.append(15 - u.size(), '\x00');
-    return result;
+std::string BelT::read_file(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) throw std::runtime_error("Не удалось открыть файл для чтения: " + filename);
+
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    return ss.str();
 }
+void BelT::write_to_file(const std::string& filename, const std::string& data) {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file) throw std::runtime_error("Не удалось открыть файл для записи: " + filename);
 
-// XOR для строк
-std::string BelT::xor_strings(const std::string& a, const std::string& b) {
-    std::string result;
-    for (size_t i = 0; i < a.size() && i < b.size(); ++i) {
-        result += a[i] ^ b[i];
-    }
-    return result;
-}
-
-// Реализация belt-mac
-std::string BelT::belt_mac(const std::string& data) {
-    std::vector<std::string> blocks = SplitTo128(data);
-
-    std::string s(16, '\x00');
-    std::string r = ENCRYPT_ONE_BLOCK(s);
-
-    for (size_t i = 0; i < blocks.size() - 1; ++i) {
-        s = xor_strings(s, blocks[i]);
-        s = ENCRYPT_ONE_BLOCK(s);
-    }
-
-    std::string last_block = blocks.back();
-    if (last_block.size() == 16) {
-        s = xor_strings(s, xor_strings(last_block, phi1(r)));
-    }
-    else {
-        s = xor_strings(s, xor_strings(psi(last_block), phi2(r)));
-    }
-
-    std::string tag = ENCRYPT_ONE_BLOCK(s);
-    return tag.substr(0, 8); // Первые 64 бита
+    file.write(data.c_str(), data.size());
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 std::string BelT::ENCRYPT_ONE_BLOCK(const std::string& X_str) {
@@ -166,41 +138,43 @@ std::string BelT::ENCRYPT_ONE_BLOCK(const std::string& X_str) {
     std::string Y_str = Connect32To128(Y);
     return Y_str;
 }
-std::string BelT::ENCRYPTION_ECB(const std::string& text) {
-    // Check size of text >= 128 bit
-    if (text.size() < 16) {
+std::string BelT::ENCRYPTION_ECB(const std::string& plaintext) {
+    if (plaintext.size() < BLOCK_128_length) {
         throw std::invalid_argument("Incorrect text size");
     }
 
-    std::vector<std::string> blocks_128b = SplitTo128(text);
+    std::vector<std::string> blocks_128b = SplitTo128(plaintext);
 
     uint32_t num_of_blocks = blocks_128b.size();
-    uint8_t length_last_block = text.size() % 16;
+    uint8_t length_last_block = plaintext.size() % 16;
 
-    std::string text_encrypted;
+    std::string ciphertext;
     for (uint32_t i = 0; i < num_of_blocks; ++i) {
         if (length_last_block != 0 && i == num_of_blocks - 2) {
             std::string enc_last_block = ENCRYPT_ONE_BLOCK(blocks_128b[i]);
             std::string r = enc_last_block.substr(length_last_block, 16 - length_last_block);
             enc_last_block = enc_last_block.substr(0, length_last_block);
 
-            text_encrypted += ENCRYPT_ONE_BLOCK(blocks_128b[i + 1] + r);
-            text_encrypted += enc_last_block;
+            ciphertext += ENCRYPT_ONE_BLOCK(blocks_128b[i + 1] + r);
+            ciphertext += enc_last_block;
             break;
         }
-        text_encrypted += ENCRYPT_ONE_BLOCK(blocks_128b[i]);
+        ciphertext += ENCRYPT_ONE_BLOCK(blocks_128b[i]);
     }
-    return text_encrypted;
+    return ciphertext;
 }
-std::string BelT::ENCRYPTION_CTR(const std::string& text, const std::string& iv) {
+std::string BelT::ENCRYPTION_CTR(const std::string& plaintext, const std::string& iv) {
+    if (plaintext.size() < BLOCK_128_length) {
+        throw std::invalid_argument("Incorrect text size");
+    }
     // Проверка размера IV (синхропосылки)
-    if (iv.size() != 16) {
-        throw std::invalid_argument("IV must be 16 bytes (128 bits)");
+    if (iv.size() != IV_128_length) {
+        throw std::invalid_argument("IV must be 128 bits");
     }
 
     // Разбиваем текст на блоки по 16 байт
-    std::vector<std::string> blocks = SplitTo128(text);
-    std::string result;
+    std::vector<std::string> blocks = SplitTo128(plaintext);
+    std::string ciphertext;
 
     // Инициализируем s = belt-block(S, K)
     std::string s = ENCRYPT_ONE_BLOCK(iv);
@@ -224,15 +198,32 @@ std::string BelT::ENCRYPTION_CTR(const std::string& text, const std::string& iv)
             encrypted_block += blocks[i][j] ^ keystream[j];
         }
 
-        result += encrypted_block;
+        ciphertext += encrypted_block;
     }
 
-    return result;
+    return ciphertext;
 }
+std::string BelT::ENCRYPTION_MAC(const std::string& data) {
+    std::vector<std::string> blocks = SplitTo128(data);
 
-// Для CTR режима шифрование и дешифрование одинаковы
-std::string BelT::DECRYPTION_CTR(const std::string& ciphertext, const std::string& iv) {
-    return ENCRYPTION_CTR(ciphertext, iv);
+    std::string s(16, '\x00');
+    std::string r = ENCRYPT_ONE_BLOCK(s);
+
+    for (size_t i = 0; i < blocks.size() - 1; ++i) {
+        s = xor_strings(s, blocks[i]);
+        s = ENCRYPT_ONE_BLOCK(s);
+    }
+
+    std::string last_block = blocks.back();
+    if (last_block.size() == 16) {
+        s = xor_strings(s, xor_strings(last_block, phi1(r)));
+    }
+    else {
+        s = xor_strings(s, xor_strings(psi(last_block), phi2(r)));
+    }
+
+    std::string tag = ENCRYPT_ONE_BLOCK(s);
+    return tag.substr(0, 8); // Первые 64 бита
 }
 
 std::string BelT::DECRYPT_ONE_BLOCK(const std::string& Y_str) {
@@ -269,7 +260,7 @@ std::string BelT::DECRYPT_ONE_BLOCK(const std::string& Y_str) {
 }
 std::string BelT::DECRYPTION_ECB(const std::string& text_encrypted) {
     // Check size of text_encrypted >= 128 bit
-    if (text_encrypted.size() < 16) {
+    if (text_encrypted.size() < BLOCK_128_length) {
         throw std::invalid_argument("Incorrect ciphertext size");
     }
 
@@ -293,7 +284,10 @@ std::string BelT::DECRYPTION_ECB(const std::string& text_encrypted) {
     }
     return text;
 }
-
+// Для CTR режима шифрование и дешифрование одинаковы
+std::string BelT::DECRYPTION_CTR(const std::string& ciphertext, const std::string& iv) {
+    return ENCRYPTION_CTR(ciphertext, iv);
+}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 uint32_t BelT::WordToNumToWord(uint32_t word) {
     uint32_t byte_parts[4]{};
@@ -309,6 +303,31 @@ uint32_t BelT::StrToUint(const std::string& str, uint32_t start_index) {
         block_32b |= static_cast<unsigned char>(str[4 * start_index + j]) << (8 * (3 - j));
     }
     return block_32b;
+}
+
+std::string BelT::phi1(const std::string& r) {
+    auto words = Split128To32(r);
+    uint32_t temp = words[0] ^ words[1];
+    return Connect32To128({ words[1], words[2], words[3], temp });
+}
+std::string BelT::phi2(const std::string& r) {
+    auto words = Split128To32(r);
+    uint32_t temp = words[0] ^ words[3];
+    return Connect32To128({ temp, words[0], words[1], words[2] });
+}
+std::string BelT::psi(const std::string& u) {
+    if (u.size() == 16) return u;
+    std::string result = u;
+    result += '\x80';
+    result.append(15 - u.size(), '\x00');
+    return result;
+}
+std::string BelT::xor_strings(const std::string& a, const std::string& b) {
+    std::string result;
+    for (size_t i = 0; i < a.size() && i < b.size(); ++i) {
+        result += a[i] ^ b[i];
+    }
+    return result;
 }
 
 uint32_t BelT::ShLo(uint32_t word) {

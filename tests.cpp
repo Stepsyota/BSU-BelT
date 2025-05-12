@@ -1,49 +1,14 @@
 ﻿#include "tests.h"
 
-
-void RunTests_CTR_ENC() {
-    BelT enc("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6"s, CipherMode::CTR);
-    std::string word_0 = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4\x85\x04\xFA\x9D\x1B\xB6\xC7\xAC\x25\x2E\x72\xC2\x02\xFD\xCE\x0D\x5B\xE3\xD6\x12\x17\xB9\x61\x81\xFE\x67\x86\xAD\x71\x6B\x89\x0B"s;
-    std::string iv = "\xBE\x32\x97\x13\x43\xFC\x9A\x48\xA0\x2A\x88\x5F\x19\x4B\x09\xA1"s;
-    std::cout << "Tests for encryption:\n";
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-    std::string encrypted = enc.encrypt(word_0, iv);
-    std::string decrypted = enc.decrypt(encrypted, iv);
-    std::cout << "X:\t\t"; print_str_hex(word_0);
-    std::cout << "Y:\t\t"; print_str_hex(encrypted);
-    std::cout << "X decrypted:\t"; print_str_hex(decrypted);
-    if (word_0 == decrypted) {
-        std::cout << "Test passed!\n";
-    }
-    else {
-        std::cout << "Test failed!\n";
-    }
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-}
-void RunTests_CTR_DEC() {
-    BelT enc("\x92\xBD\x9B\x1C\xE5\xD1\x41\x01\x54\x45\xFB\xC9\x5E\x4D\x0E\xF2\x68\x20\x80\xAA\x22\x7D\x64\x2F\x26\x87\xF9\x34\x90\x40\x55\x11"s, CipherMode::CTR);
-    std::string word_0 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1\xC1\xAB\x76\x38\x9F\xE6\x78\xCA\xF7\xC6\xF8\x60\xD5\xBB\x9C\x4F\xF3\x3C\x65\x7B\x63\x7C\x30\x6A\xDD\x4E\xA7\x79"s;
-    std::string iv = "\x7E\xCD\xA4\xD0\x15\x44\xAF\x8C\xA5\x84\x50\xBF\x66\xD2\xE8\x8A"s;
-    std::cout << "Tests for decryption:\n";
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-    std::string decrypted = enc.decrypt(word_0, iv);
-    std::string encrypted = enc.encrypt(decrypted, iv);
-    std::cout << "Y:\t\t"; print_str_hex(word_0);
-    std::cout << "X:\t\t"; print_str_hex(decrypted);
-    std::cout << "Y encrypted:\t"; print_str_hex(encrypted);
-    if (word_0 == encrypted) {
-        std::cout << "Test passed!\n";
-    }
-    else {
-        std::cout << "Test failed!\n";
-    }
-}
 void tests() {
-    //RunTests_CTR_ENC();
-    RunTests_CTR_DEC();
-    //RunTests_ECB_ENC();
-    //RunTests_ECB_DEC();
+    RunTests_ECB_ENC();
+    RunTests_ECB_DEC();
+    RunCTRTests();
+    RunMACTEsts();
+    RunTest_HugeText_();
+    RunTest_File_Encryption_Decryption();
 }
+
 void RunTest_HugeText_() {
     setlocale(LC_ALL, "Russian");
     std::string text = R"(В начале июля, в чрезвычайно жаркое время, под вечер, один молодой человек вышел из своей каморки, которую нанимал от жильцов в С — м переулке, на улицу и медленно, как бы в нерешимости, отправился к К — ну мосту.
@@ -91,11 +56,27 @@ void RunTest_HugeText_() {
     Но он не мог выразить ни словами, ни восклицаниями своего волнения. Чувство бесконечного отвращения, начинавшее давить и мутить его сердце еще в то время, как он только шел к старухе, достигло теперь такого размера и так ярко выяснилось, что он не знал, куда деться от тоски своей. Он шел по тротуару как пьяный, не замечая прохожих и сталкиваясь с ними, и опомнился уже в следующей улице. Оглядевшись, он заметил, что стоит подле распивочной, в которую вход был с тротуара по лестнице вниз, в подвальный этаж. Из дверей, как раз в эту минуту, выходили двое пьяных и, друг друга поддерживая и ругая, взбирались на улицу. Долго не думая, Раскольников тотчас же спустился вниз. Никогда до сих пор не входил он в распивочные, но теперь голова его кружилась, и к тому же палящая жажда томила его. Ему захотелось выпить холодного пива, тем более что внезапную слабость свою он относил и к тому, что был голоден. Он уселся в темном и грязном углу, за липким столиком, спросил пива и с жадностию выпил первый стакан. Тотчас же всё отлегло, и мысли его прояснели. «Всё это вздор, — сказал он с надеждой, — и нечем тут было смущаться! Просто физическое расстройство! Один какой-нибудь стакан пива, кусок сухаря, — и вот, в один миг, крепнет ум, яснеет мысль, твердеют намерения! Тьфу, какое всё это ничтожество!..» Но, несмотря на этот презрительный плевок, он глядел уже весело, как будто внезапно освободясь от какого-то ужасного бремени, и дружелюбно окинул глазами присутствующих. Но даже и в эту минуту он отдаленно предчувствовал, что вся эта восприимчивость к лучшему была тоже болезненная.
     В распивочной на ту пору оставалось мало народу. Кроме тех двух пьяных, что попались на лестнице, вслед за ними же вышла еще разом целая ватага, человек в пять, с одною девкой и с гармонией. После них стало тихо и просторно. Остались: один хмельной, но немного, сидевший за пивом, с виду мещанин; товарищ его, толстый, огромный, в сибирке и с седою бородой, очень захмелевший, задремавший на лавке и изредка, вдруг, как бы спросонья, начинавший прищелкивать пальцами, расставив руки врозь, и подпрыгивать верхнею частию корпуса, не вставая с лавки, причем подпевал какую-то ерунду, силясь припомнить стихи, вроде:)";
 
-    //BelT enc("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6");
+    BelT enc("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6", CipherMode::ECB);
     //std::string encrypted_text = enc.ENCRYPTION_ECB(text);
     //std::cout << encrypted_text << std::endl;
-    //std::cout << enc.DECRYPTION_ECB(encrypted_text) << std::endl;
+    
+    if (text == enc.decrypt(enc.encrypt(text)))
+    {
+        std::cout << "Huge text encryption and decryption test_ECB passed!" << std::endl;
+    }
+    else {
+        std::cout << "Huge text encryption and decryption test_ECB failed!" << std::endl;
+    }
+    BelT enc2("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6", CipherMode::CTR);
+    if (text == enc.decrypt(enc.encrypt(text, "\xBE\x32\x97\x13\x43\xFC\x9A\x48\xA0\x2A\x88\x5F\x19\x4B\x09\xA1"s), "\xBE\x32\x97\x13\x43\xFC\x9A\x48\xA0\x2A\x88\x5F\x19\x4B\x09\xA1"s))
+    {
+        std::cout << "Huge text encryption and decryption test_CTR passed!" << std::endl;
+    }
+    else {
+        std::cout << "Huge text encryption and decryption test_CTR failed!" << std::endl;
+    }
 }
+
 void RunTests_ECB_ENC() {
     BelT enc("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6", CipherMode::ECB);
     std::string word_0 = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4"s;
@@ -108,21 +89,6 @@ void RunTests_ECB_ENC() {
     RunOneTest_ENC_ECB(enc, word_1, "69cca1c9 3557c9e3 d66bc3e0 fa88fa6e 5f23102e f1097107 75017f73 806da9dc 46fb2ed2 ce771f26 dcb5e5d1 569f9ab0");
     std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
     RunOneTest_ENC_ECB(enc, word_2, "69cca1c9 3557c9e3 d66bc3e0 fa88fa6e 36f00cfe d6d1ca14 98c12798 f4beb207 5f23102e f1097107 75017f73 806da9");
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-}
-void RunTests_ECB_DEC() {
-    std::cout << "Tests for decryption:\n";
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-    BelT enc1("\x92\xBD\x9B\x1C\xE5\xD1\x41\x01\x54\x45\xFB\xC9\x5E\x4D\x0E\xF2\x68\x20\x80\xAA\x22\x7D\x64\x2F\x26\x87\xF9\x34\x90\x40\x55\x11", CipherMode::ECB);
-    std::string word_decr_0 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1"s;
-    std::string word_ecb_decr_1 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1\xC1\xAB\x76\x38\x9F\xE6\x78\xCA\xF7\xC6\xF8\x60\xD5\xBB\x9C\x4F\xF3\x3C\x65\x7B\x63\x7C\x30\x6A\xDD\x4E\xA7\x79\x9E\xB2\x3D\x31"s;
-    std::string word_ecb_decr_2 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1\xC1\xAB\x76\x38\x9F\xE6\x78\xCA\xF7\xC6\xF8\x60\xD5\xBB\x9C\x4F\xF3\x3C\x65\x7B"s;
-
-    RunOneTest_DEC_ECB(enc1, word_decr_0, "0dc53006 00cab840 b38448e5 e993f421");
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-    RunOneTest_DEC_ECB(enc1, word_ecb_decr_1, "0dc53006 00cab840 b38448e5 e993f421 e55a239f 2ab5c5d5 fdb6e81b 40938e2a 54120ca3 e6e19c7a d750fc35 31daeab7");
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-    RunOneTest_DEC_ECB(enc1, word_ecb_decr_2, "0dc53006 00cab840 b38448e5 e993f421 5780a6e2 b69eafbb 258726d7 b6718523 e55a239f");
     std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 }
 void RunOneTest_ENC_ECB(BelT& enc, const std::string& input, const std::string& expected) {
@@ -139,6 +105,22 @@ void RunOneTest_ENC_ECB(BelT& enc, const std::string& input, const std::string& 
         std::cout << "Test failed!\n";
     }
 }
+
+void RunTests_ECB_DEC() {
+    std::cout << "Tests for decryption:\n";
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+    BelT enc1("\x92\xBD\x9B\x1C\xE5\xD1\x41\x01\x54\x45\xFB\xC9\x5E\x4D\x0E\xF2\x68\x20\x80\xAA\x22\x7D\x64\x2F\x26\x87\xF9\x34\x90\x40\x55\x11", CipherMode::ECB);
+    std::string word_decr_0 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1"s;
+    std::string word_ecb_decr_1 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1\xC1\xAB\x76\x38\x9F\xE6\x78\xCA\xF7\xC6\xF8\x60\xD5\xBB\x9C\x4F\xF3\x3C\x65\x7B\x63\x7C\x30\x6A\xDD\x4E\xA7\x79\x9E\xB2\x3D\x31"s;
+    std::string word_ecb_decr_2 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1\xC1\xAB\x76\x38\x9F\xE6\x78\xCA\xF7\xC6\xF8\x60\xD5\xBB\x9C\x4F\xF3\x3C\x65\x7B"s;
+
+    RunOneTest_DEC_ECB(enc1, word_decr_0, "0dc53006 00cab840 b38448e5 e993f421");
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+    RunOneTest_DEC_ECB(enc1, word_ecb_decr_1, "0dc53006 00cab840 b38448e5 e993f421 e55a239f 2ab5c5d5 fdb6e81b 40938e2a 54120ca3 e6e19c7a d750fc35 31daeab7");
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+    RunOneTest_DEC_ECB(enc1, word_ecb_decr_2, "0dc53006 00cab840 b38448e5 e993f421 5780a6e2 b69eafbb 258726d7 b6718523 e55a239f");
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+}
 void RunOneTest_DEC_ECB(BelT& enc, const std::string& input, const std::string& expected) {
     std::string decrypted = enc.decrypt(input);
     std::string encrypted = enc.encrypt(decrypted);
@@ -154,10 +136,117 @@ void RunOneTest_DEC_ECB(BelT& enc, const std::string& input, const std::string& 
     }
 }
 
+void RunCTRTests() {
+    BelT enc("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6"s, CipherMode::CTR);
+    std::string testText1 = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4\x85\x04\xFA\x9D\x1B\xB6\xC7\xAC\x25\x2E\x72\xC2\x02\xFD\xCE\x0D\x5B\xE3\xD6\x12\x17\xB9\x61\x81\xFE\x67\x86\xAD\x71\x6B\x89\x0B"s;
+    std::string testIV1 = "\xBE\x32\x97\x13\x43\xFC\x9A\x48\xA0\x2A\x88\x5F\x19\x4B\x09\xA1"s;
+    std::cout << "Tests for encryption:\n";
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+    std::string encrypted1 = enc.encrypt(testText1, testIV1);
+    std::string decrypted1 = enc.decrypt(encrypted1, testIV1);
+    std::cout << "X1:\t\t"; print_str_hex(testText1);
+    std::cout << "Y1:\t\t"; print_str_hex(encrypted1);
+    std::cout << "X1 decrypted:\t"; print_str_hex(decrypted1);
+    if (testText1 == decrypted1) {
+        std::cout << "Test passed!\n";
+    }
+    else {
+        std::cout << "Test failed!\n";
+    }
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+
+    BelT dec("\x92\xBD\x9B\x1C\xE5\xD1\x41\x01\x54\x45\xFB\xC9\x5E\x4D\x0E\xF2\x68\x20\x80\xAA\x22\x7D\x64\x2F\x26\x87\xF9\x34\x90\x40\x55\x11"s, CipherMode::CTR);
+    std::string testText2 = "\xE1\x2B\xDC\x1A\xE2\x82\x57\xEC\x70\x3F\xCC\xF0\x95\xEE\x8D\xF1\xC1\xAB\x76\x38\x9F\xE6\x78\xCA\xF7\xC6\xF8\x60\xD5\xBB\x9C\x4F\xF3\x3C\x65\x7B\x63\x7C\x30\x6A\xDD\x4E\xA7\x79"s;
+    std::string testIV2 = "\x7E\xCD\xA4\xD0\x15\x44\xAF\x8C\xA5\x84\x50\xBF\x66\xD2\xE8\x8A"s;
+    std::cout << "Tests for decryption:\n";
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+    std::string decrypted2 = dec.decrypt(testText2, testIV2);
+    std::string encrypted2 = dec.encrypt(decrypted2, testIV2);
+    std::cout << "Y2:\t\t"; print_str_hex(testText2);
+    std::cout << "X2:\t\t"; print_str_hex(decrypted2);
+    std::cout << "Y2 encrypted:\t"; print_str_hex(encrypted2);
+    if (testText2 == encrypted2) {
+        std::cout << "Test passed!\n";
+    }
+    else {
+        std::cout << "Test failed!\n";
+    }
+}
+
+void RunMACTEsts() {
+    const std::string key =
+        "\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47"s
+        "\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6"s;
+
+    const std::string testText1 =
+        "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58"s;
+
+    const std::string testText2 =
+        "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4"s
+        "\x85\x04\xFA\x9D\x1B\xB6\xC7\xAC\x25\x2E\x72\xC2\x02\xFD\xCE\x0D"s
+        "\x5B\xE3\xD6\x12\x17\xB9\x61\x81\xFE\x67\x86\xAD\x71\x6B\x89\x0B"s;
+
+    BelT enc(key, CipherMode::MAC);
+
+    std::cout << "MAC Mode Tests:\n";
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+
+    // Test 1: MAC of smaller input
+    std::string mac1 = enc.encrypt(testText1);
+    std::cout << "Input (X1):\t"; print_str_hex(testText1);
+    std::cout << "MAC (Y1):\t"; print_str_hex(mac1);
+
+    // Test 2: MAC of larger input
+    std::string mac2 = enc.encrypt(testText2);
+    std::cout << "Input (X2):\t"; print_str_hex(testText2);
+    std::cout << "MAC (Y2):\t"; print_str_hex(mac2);
+
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+}
+
 void print_str_hex(std::string str) {
     for (int i = 0; i < str.size(); ++i) {
         std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(str[i]));
         if ((i + 1) % 4 == 0) std::cout << " ";
     }
     std::cout << std::endl;
+}
+
+void RunTest_File_Encryption_Decryption() {
+    // ECB Mode Test
+    const std::string key1 = "\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47"s;
+    BelT enc_ecb(key1, CipherMode::ECB);
+
+    const std::string input1 = "files/input.txt";
+    const std::string encrypted1 = "files/encrypted.txt";
+    const std::string decrypted1 = "files/decrypted.txt";
+
+    enc_ecb.encrypt_file(input1, encrypted1, "");
+    enc_ecb.decrypt_file(encrypted1, decrypted1, "");
+
+    if (enc_ecb.read_file(input1) == enc_ecb.read_file(decrypted1)) {
+        std::cout << "File encryption and decryption test_ECB passed!" << std::endl;
+    }
+    else {
+        std::cout << "File encryption and decryption test_ECB failed!" << std::endl;
+    }
+
+    // CTR Mode Test
+    const std::string key2 = "\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47"s;
+    const std::string iv = "\xBE\x32\x97\x13\x43\xFC\x9A\x48\xA0\x2A\x88\x5F\x19\x4B\x09\xA1"s;
+    BelT enc_ctr(key2, CipherMode::CTR);
+
+    const std::string input2 = "files/input2.txt";
+    const std::string encrypted2 = "files/encrypted2.txt";
+    const std::string decrypted2 = "files/decrypted2.txt";
+
+    enc_ctr.encrypt_file(input2, encrypted2, iv);
+    enc_ctr.decrypt_file(encrypted2, decrypted2, iv);
+
+    if (enc_ctr.read_file(input2) == enc_ctr.read_file(decrypted2)) {
+        std::cout << "File encryption and decryption test_CTR passed!" << std::endl;
+    }
+    else {
+        std::cout << "File encryption and decryption test_CTR failed!" << std::endl;
+    }
 }
