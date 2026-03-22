@@ -1,4 +1,4 @@
-#include "BelT.h"
+#include "../include/BelT.h"
 
 std::vector<uint32_t> BelT::KeyToNum(const std::string& key_str) {
     if (key_str.size() != KEY_128_length && key_str.size() != KEY_192_length && key_str.size() != KEY_256_length) {

@@ -14,6 +14,12 @@ enum class CipherMode {
 	MAC,    // Message authentication code
 };
 
+const uint8_t BLOCK_128_length = 16;
+const uint8_t KEY_128_length = 16;
+const uint8_t KEY_192_length = 24;
+const uint8_t KEY_256_length = 32;
+const uint8_t IV_128_length = 16;
+
 class BelT {
 public:
 	// Constructor: takes key and mode

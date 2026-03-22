@@ -1,5 +1,5 @@
 #include <iostream>
-#include "BelT.h"
+#include "../include/BelT.h"
 #include "tests.h"
 
 int main()

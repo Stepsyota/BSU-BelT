@@ -1,4 +1,4 @@
-#include "BelT.h"
+#include "../include/BelT.h"
 
 std::string BelT::ENCRYPTION_ECB(const std::string& plaintext) {
     if (plaintext.size() < BLOCK_128_length) {

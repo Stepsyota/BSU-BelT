@@ -1,10 +1,4 @@
-#include "BelT.h"
-
-const uint8_t BLOCK_128_length = 16;
-const uint8_t KEY_128_length = 16;
-const uint8_t KEY_192_length = 24;
-const uint8_t KEY_256_length = 32;
-const uint8_t IV_128_length = 16;
+#include "../include/BelT.h"
 
 BelT::BelT(const std::string& key_str, CipherMode mode){
     // Check size of key > 256 bit

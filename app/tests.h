@@ -4,7 +4,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "BelT.h"
+#include "../include/BelT.h"
 
 using namespace std::string_literals;
 

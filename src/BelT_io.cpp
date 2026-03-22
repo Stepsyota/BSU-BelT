@@ -1,4 +1,4 @@
-#include "BelT.h"
+#include "../include/BelT.h"
 
 void BelT::encrypt_file(const std::string& input_filename, const std::string& output_filename, const std::string& iv) {
     std::string plaintext = read_file(input_filename);
