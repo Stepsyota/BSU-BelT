@@ -1,9 +1,6 @@
-#include <iostream>
-#include "../include/BelT.h"
 #include "tests.h"
 
-int main()
-{
+int main() {
     tests();
     return 0;
 }

@@ -1,12 +1,66 @@
 ﻿#include "tests.h"
+#include "BelT.h"
+#include <array>
+#include <cstdint>
+
+void test_keys();
+void test_encryption();
 
 void tests() {
-    RunTests_ECB_ENC();
-    RunTests_ECB_DEC();
-    RunCTRTests();
-    RunMACTEsts();
-    RunTest_HugeText_();
-    RunTest_File_Encryption_Decryption();
+    test_keys();
+    test_encryption();
+    // RunTests_ECB_ENC();
+    // RunTests_ECB_DEC();
+    // RunCTRTests();
+    // RunMACTEsts();
+    // RunTest_HugeText_();
+    // RunTest_File_Encryption_Decryption();
+}
+
+void test_keys() {
+    // std::array<uint8_t, 16> key_128 = {
+    //     0xE9, 0xDE, 0xE7, 0x2C, 0x8F, 0x0C, 0x0F, 0xA6,
+    //     0x2D, 0xDB, 0x49, 0xF4, 0x6F, 0x73, 0x96, 0x47
+    // };
+    // std::array<uint8_t, 24> key_192 = {
+    //     0xE9, 0xDE, 0xE7, 0x2C, 0x8F, 0x0C, 0x0F, 0xA6,
+    //     0x2D, 0xDB, 0x49, 0xF4, 0x6F, 0x73, 0x96, 0x47,
+    //     0x06, 0x07, 0x53, 0x16, 0xED, 0x24, 0x7A, 0x37
+    // };
+    std::array<uint8_t, 32> key_256 = {
+        0xE9, 0xDE, 0xE7, 0x2C, 0x8F, 0x0C, 0x0F, 0xA6,
+        0x2D, 0xDB, 0x49, 0xF4, 0x6F, 0x73, 0x96, 0x47,
+        0x06, 0x07, 0x53, 0x16, 0xED, 0x24, 0x7A, 0x37,
+        0x39, 0xCB, 0xA3, 0x83, 0x03, 0xA9, 0x8B, 0xF6
+    };
+    // auto belt128 = BelT::create(key_128);
+    // auto belt192 = BelT::create(key_192);
+    auto belt256 = BelT::create(key_256);
+    // BelT enc128("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47", CipherMode::ECB);
+    // BelT enc192("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37", CipherMode::ECB);
+    BelT enc256("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6", CipherMode::ECB);
+    auto tester = BelTTester();
+    // tester.print_round_keys(enc128, belt128.value());
+    // tester.print_round_keys(enc192, belt192.value());
+    tester.print_round_keys(enc256, belt256.value());
+}
+
+void test_encryption() {
+    std::array<uint8_t, 32> key_256 = {
+        0xE9, 0xDE, 0xE7, 0x2C, 0x8F, 0x0C, 0x0F, 0xA6,
+        0x2D, 0xDB, 0x49, 0xF4, 0x6F, 0x73, 0x96, 0x47,
+        0x06, 0x07, 0x53, 0x16, 0xED, 0x24, 0x7A, 0x37,
+        0x39, 0xCB, 0xA3, 0x83, 0x03, 0xA9, 0x8B, 0xF6
+    };
+    auto belt256 = BelT::create(key_256);
+    BelT enc256("\xE9\xDE\xE7\x2C\x8F\x0C\x0F\xA6\x2D\xDB\x49\xF4\x6F\x73\x96\x47\x06\x07\x53\x16\xED\x24\x7A\x37\x39\xCB\xA3\x83\x03\xA9\x8B\xF6", CipherMode::ECB);
+    auto tester = BelTTester();
+
+    std::array<uint32_t, 4> word = {0xB194BAC8, 0x0A08F53B, 0x366D008E, 0x584A5DE4};
+    std::string word_0 = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4"s;
+
+    tester.print_blocks(enc256, belt256.value(), word_0, word);
+
 }
 
 void RunTest_HugeText_() {

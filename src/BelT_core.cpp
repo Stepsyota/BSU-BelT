@@ -1,4 +1,89 @@
 #include "../include/BelT.h"
+#include <bit>
+#include <cstdint>
+#include <expected>
+
+BelT::BelT(){
+    
+}
+
+std::expected<BelT, BelTError> BelT::create(const std::array<uint8_t, KEY_128_length>& key) {
+    BelT cipher;
+    cipher.SetRoundKeys(key.data(), KEY_128_length);
+    return cipher;
+}
+
+std::expected<BelT, BelTError> BelT::create(const std::array<uint8_t, KEY_192_length>& key) {
+    BelT cipher;
+    cipher.SetRoundKeys(key.data(), KEY_192_length);
+    return cipher;
+}
+
+std::expected<BelT, BelTError> BelT::create(const std::array<uint8_t, KEY_256_length>& key) {
+    BelT cipher;
+    cipher.SetRoundKeys(key.data(), KEY_256_length);
+    return cipher;
+}
+
+std::array<uint32_t, 4> BelT::ENCRYPT_BLOCK(std::array<uint32_t, 4> X) {
+    uint32_t a = std::byteswap(X[0]);
+    uint32_t b = std::byteswap(X[1]);
+    uint32_t c = std::byteswap(X[2]);
+    uint32_t d = std::byteswap(X[3]);
+    uint32_t e;
+
+    for (uint8_t i = 1; i < 9; ++i) {
+        b = b ^ G_funcNEW(a + ROUND_KEY[7 * i - 7], 5);
+        c = c ^ G_funcNEW(d + ROUND_KEY[7 * i - 6], 21);
+        a = a - G_funcNEW(b + ROUND_KEY[7 * i - 5], 13);
+        e = G_funcNEW(b + c + ROUND_KEY[7 * i - 4], 21) ^ i;
+        b = b + e;
+        c = c - e;
+        d = d + G_funcNEW(c + ROUND_KEY[7 * i - 3], 13);
+        b = b ^ G_funcNEW(a + ROUND_KEY[7 * i - 2], 21);
+        c = c ^ G_funcNEW(d + ROUND_KEY[7 * i - 1], 5);
+        std::swap(a, b);
+        std::swap(c, d);
+        std::swap(b, c);
+    }
+
+    std::array<uint32_t, 4> Y = {
+        std::byteswap(b), std::byteswap(d),
+        std::byteswap(a), std::byteswap(c)
+    };
+    return Y;
+}
+
+std::array<uint32_t, 4> BelT::DECRYPT_BLOCK(std::array<uint32_t, 4> Y) {
+    uint32_t a = std::byteswap(Y[0]);
+    uint32_t b = std::byteswap(Y[1]);
+    uint32_t c = std::byteswap(Y[2]);
+    uint32_t d = std::byteswap(Y[3]);
+    uint32_t e;
+
+    for (uint8_t i = 8; i > 0; --i) {
+        b = b ^ G_funcNEW(a + ROUND_KEY[7 * i - 1], 5);
+        c = c ^ G_funcNEW(d + ROUND_KEY[7 * i - 2], 21);
+        a = a - G_funcNEW(b + ROUND_KEY[7 * i - 3], 13);
+        e = G_funcNEW(b + c + ROUND_KEY[7 * i - 4], 21) ^ i;
+        b = b + e;
+        c = c - e;
+        d = d + G_funcNEW(c + ROUND_KEY[7 * i - 5], 13);
+        b = b ^ G_funcNEW(a + ROUND_KEY[7 * i - 6], 21);
+        c = c ^ G_funcNEW(d + ROUND_KEY[7 * i - 7], 5);
+        std::swap(a, b);
+        std::swap(c, d);
+        std::swap(a, d);
+    }
+
+    std::array<uint32_t, 4> X = {
+        std::byteswap(c), std::byteswap(a), 
+        std::byteswap(d), std::byteswap(b)
+    };
+    return X;
+}
+
+
 
 BelT::BelT(const std::string& key_str, CipherMode mode){
     // Check size of key > 256 bit

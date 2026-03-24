@@ -7,11 +7,19 @@
 #include <fstream>
 #include <sstream>
 
+#include <print>
+#include <expected>
+#include <array>
+
 // Cipher operating modes
 enum class CipherMode {
 	ECB,    // Electronic Codebook
 	CTR,    // Counter mode 
 	MAC,    // Message authentication code
+};
+
+enum class BelTError {
+	InvalidKeySize,
 };
 
 const uint8_t BLOCK_128_length = 16;
@@ -22,6 +30,13 @@ const uint8_t IV_128_length = 16;
 
 class BelT {
 public:
+	static std::expected<BelT, BelTError> create(const std::array<uint8_t, 16>& key);
+	static std::expected<BelT, BelTError> create(const std::array<uint8_t, 24>& key);
+	static std::expected<BelT, BelTError> create(const std::array<uint8_t, 32>& key);
+
+	BelT();
+
+
 	// Constructor: takes key and mode
 	BelT(const std::string&, CipherMode);
 
@@ -40,6 +55,21 @@ public:
 	// Writes a string to a file
 	void write_to_file(const std::string&, const std::string&);
 private:
+
+	friend class BelTTester; // тестовый хелпер
+	void SetRoundKeys(const uint8_t* data, size_t size);
+	std::array<uint32_t, 4> ENCRYPT_BLOCK(std::array<uint32_t, 4> X);
+	std::array<uint32_t, 4> DECRYPT_BLOCK(std::array<uint32_t, 4> Y);
+
+
+	uint32_t ShLoNEW(uint32_t word, uint8_t r);
+	uint32_t ShHiNEW(uint32_t word, uint8_t r); 
+	uint32_t RotHiNEW(uint32_t word, uint8_t r);
+	uint32_t G_funcNEW(uint32_t block, uint8_t r);
+	std::array<uint8_t, 4> Split32to8NEW(uint32_t block);
+	uint32_t Connect8to32NEW(std::array<uint8_t, 4>block);
+	uint8_t H_funcNEW(uint8_t word);
+
 	// Encrypts one 128-bit block
 	std::string ENCRYPT_ONE_BLOCK(const std::string&);
 
@@ -100,4 +130,76 @@ private:
 
 	uint32_t ROUND_KEY[56]{};
 	CipherMode mode;
+};
+
+class BelTTester {
+public:
+    static void print_round_keys(const BelT& b1, const BelT& b2) {
+		std::print("START\n");
+        for (int k = 0; k < 56; ++k) {
+            //std::cout << std::hex << b1.ROUND_KEY[k] << ' ';
+			std::print("{:#08X} == {:#08X} {}\n", b1.ROUND_KEY[k], b2.ROUND_KEY[k], b1.ROUND_KEY[k] == b2.ROUND_KEY[k]);
+        }
+		std::print("\nEND\n");
+    }
+
+	static void print_blocks(BelT& b1, BelT& b2, std::string & word1, std::array<uint32_t, 4> & word2) {
+		std::print("START\n");
+		std::print("First word:\t");
+		for (size_t i = 0; i < word1.size(); ++i)
+		{
+			std::print("{:02X}", static_cast<uint8_t>(word1[i]));
+
+			if ((i + 1) % 4 == 0)
+				std::print("\t");
+		}		
+		std::print("\n");
+		std::print("Second word:\t");
+		for (auto i : word2)
+		{
+			std::print("{:08X}\t", i);
+		}
+
+		std::print("\n");
+
+		std::string encrypted = b1.ENCRYPT_ONE_BLOCK(word1);
+		std::print("First enc word:\t");
+		for (size_t i = 0; i < encrypted.size(); ++i)
+		{
+			std::print("{:02X}", static_cast<uint8_t>(encrypted[i]));
+
+			if ((i + 1) % 4 == 0)
+				std::print("\t");
+		}		
+		std::print("\n");
+		
+		std::array<uint32_t, 4> encrypted_2 = b2.ENCRYPT_BLOCK(word2);
+		std::print("Sec enc word:\t");
+		for (auto i : encrypted_2)
+		{
+			std::print("{:08X}\t", i);
+		}
+
+		std::print("\n");
+
+		std::string decrypted = b1.DECRYPT_ONE_BLOCK(encrypted);
+		std::print("First enc word:\t");
+		for (size_t i = 0; i < decrypted.size(); ++i)
+		{
+			std::print("{:02X}", static_cast<uint8_t>(decrypted[i]));
+
+			if ((i + 1) % 4 == 0)
+				std::print("\t");
+		}		
+		std::print("\n");
+		
+		std::array<uint32_t, 4> decrypted_2 = b2.DECRYPT_BLOCK(encrypted_2);
+		std::print("Sec enc word:\t");
+		for (auto i : decrypted_2)
+		{
+			std::print("{:08X}\t", i);
+		}
+
+		std::print("\nEND\n");
+    }
 };
