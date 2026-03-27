@@ -1,0 +1,22 @@
+#include <array>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include "../include/BelT.h"
+
+TEST(BELT_BASE, EncryptSingleBlock) {
+    std::array<uint8_t, 32> key_256 = {
+        0xE9, 0xDE, 0xE7, 0x2C, 0x8F, 0x0C, 0x0F, 0xA6,
+        0x2D, 0xDB, 0x49, 0xF4, 0x6F, 0x73, 0x96, 0x47,
+        0x06, 0x07, 0x53, 0x16, 0xED, 0x24, 0x7A, 0x37,
+        0x39, 0xCB, 0xA3, 0x83, 0x03, 0xA9, 0x8B, 0xF6
+    };
+
+    auto belt256 = BelT::create(key_256);
+
+    std::array<uint32_t, 4> input = {0xB194BAC8, 0x0A08F53B, 0x366D008E, 0x584A5DE4};
+
+    std::array<uint32_t, 4> expected = {0x69CCA1C9, 0x3557C9E3, 0xD66BC3E0, 0xFA88FA6E};
+
+    std::span<const uint8_t> bytes(reinterpret_cast<const uint8_t*>(input.data()), sizeof(input));
+    EXPECT_EQ(belt256.value().encryptNEW(bytes, CipherMode::ECB), expected);
+}
