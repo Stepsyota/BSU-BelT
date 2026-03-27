@@ -1,4 +1,5 @@
 #include "../include/BelT.h"
+#include <array>
 #include <bit>
 #include <cstdint>
 #include <expected>
@@ -84,6 +85,30 @@ std::array<uint32_t, 4> BelT::DECRYPT_BLOCK(std::array<uint32_t, 4> Y) {
 }
 
 
+
+std::span<const uint8_t> BelT::encryptNEW(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV) {
+    switch (mode) {
+        case CipherMode::ECB: {
+            return BelT::ENCRYPTION_ECBNEW(data);
+        }
+        case CipherMode::CTR: {
+            if (!IV.has_value()) {
+                throw std::runtime_error("CTR mode requires IV");  
+            }
+            return BelT::ENCRYPTION_CTRNEW(data, IV.value());
+        }
+        case CipherMode::MAC: {
+            return BelT::ENCRYPTION_MACNEW(data);
+        }
+        default:  throw std::runtime_error("Unsupported cipher mode");  
+    }
+
+}
+std::span<const uint8_t> BelT::decryptNEW(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV) {
+    
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 BelT::BelT(const std::string& key_str, CipherMode mode){
     // Check size of key > 256 bit

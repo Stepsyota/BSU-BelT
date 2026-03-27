@@ -1,4 +1,27 @@
 #include "../include/BelT.h"
+#include <array>
+#include <cstdint>
+
+std::span<const uint8_t> BelT::ENCRYPTION_ECBNEW(std::span<const uint8_t> data) {
+    std::array<uint32_t, 4> BLOCK;
+    std::memcpy(BLOCK.data(), data.data(), 16);
+    std::array<uint32_t, 4> CIPHER_BLOCK;
+
+    CIPHER_BLOCK = ENCRYPT_BLOCK(BLOCK);
+
+    std::span<const uint8_t> cipher_bytes(reinterpret_cast<const uint8_t*>(CIPHER_BLOCK.data()),sizeof(CIPHER_BLOCK));
+    return cipher_bytes;
+}
+
+std::span<const uint8_t> BelT::ENCRYPTION_CTRNEW(std::span<const uint8_t> data,std::span<const uint8_t, 16> IV) {
+
+}
+
+std::span<const uint8_t> BelT::ENCRYPTION_MACNEW(std::span<const uint8_t> data) {
+
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 std::string BelT::ENCRYPTION_ECB(const std::string& plaintext) {
     if (plaintext.size() < BLOCK_128_length) {

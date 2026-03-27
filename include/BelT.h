@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstdint>
 #include <bitset>
+#include <optional>
+#include <span>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -14,7 +16,7 @@
 // Cipher operating modes
 enum class CipherMode {
 	ECB,    // Electronic Codebook
-	CTR,    // Counter mode 
+	CTR,    // Counter mode 	
 	MAC,    // Message authentication code
 };
 
@@ -30,13 +32,20 @@ const uint8_t IV_128_length = 16;
 
 class BelT {
 public:
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	static std::expected<BelT, BelTError> create(const std::array<uint8_t, 16>& key);
 	static std::expected<BelT, BelTError> create(const std::array<uint8_t, 24>& key);
 	static std::expected<BelT, BelTError> create(const std::array<uint8_t, 32>& key);
 
 	BelT();
 
+	std::span<const uint8_t> encryptNEW(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV = std::nullopt);
+	std::span<const uint8_t> decryptNEW(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV = std::nullopt);
 
+	std::span<const uint8_t> ENCRYPTION_ECBNEW(std::span<const uint8_t> data);
+    std::span<const uint8_t> ENCRYPTION_CTRNEW(std::span<const uint8_t> data,std::span<const uint8_t, 16> IV);
+	std::span<const uint8_t> ENCRYPTION_MACNEW(std::span<const uint8_t> data);
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Constructor: takes key and mode
 	BelT(const std::string&, CipherMode);
 
@@ -55,7 +64,7 @@ public:
 	// Writes a string to a file
 	void write_to_file(const std::string&, const std::string&);
 private:
-
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	friend class BelTTester; // тестовый хелпер
 	void SetRoundKeys(const uint8_t* data, size_t size);
 	std::array<uint32_t, 4> ENCRYPT_BLOCK(std::array<uint32_t, 4> X);
@@ -70,6 +79,7 @@ private:
 	uint32_t Connect8to32NEW(std::array<uint8_t, 4>block);
 	uint8_t H_funcNEW(uint8_t word);
 
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Encrypts one 128-bit block
 	std::string ENCRYPT_ONE_BLOCK(const std::string&);
 

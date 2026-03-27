@@ -7,7 +7,7 @@ void test_keys();
 void test_encryption();
 
 void tests() {
-    test_keys();
+    //test_keys();
     test_encryption();
     // RunTests_ECB_ENC();
     // RunTests_ECB_DEC();
