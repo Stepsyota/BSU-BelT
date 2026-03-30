@@ -83,6 +83,11 @@ private:
 	uint32_t Connect8to32(std::array<uint8_t, 4>block);
 	uint8_t H_func(uint8_t word);
 
+
+	uint32_t bytes_to_u32(const uint8_t* p);
+	std::array<uint8_t, 4> u32_to_bytes(uint32_t x);
+	std::array<uint32_t, 4> bytes_to_u32x4_block(const uint8_t* p);
+	std::array<uint8_t, 16> u32x4_block_to_bytes(const std::array<uint32_t, 4>& block);
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Linear transformations (used in MAC mode)
 	std::string phi1(const std::string&);

@@ -93,3 +93,36 @@ namespace {
 uint8_t BelT::H_func(uint8_t word) {
     return H_box[word];
 }
+
+uint32_t BelT::bytes_to_u32(const uint8_t* p) {
+    return (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8)  |uint32_t(p[3]);
+}
+
+std::array<uint8_t, 4> BelT::u32_to_bytes(uint32_t x) {
+    std::array<uint8_t, 4> bytes = {
+        static_cast<uint8_t>(x >> 24),
+        static_cast<uint8_t>(x >> 16),
+        static_cast<uint8_t>(x >> 8),
+        static_cast<uint8_t>(x)
+    };
+    return bytes;
+}
+
+std::array<uint32_t, 4> BelT::bytes_to_u32x4_block(const uint8_t* p) {
+    return {bytes_to_u32(p + 0), bytes_to_u32(p + 4), bytes_to_u32(p + 8), bytes_to_u32(p + 12)};
+}
+
+std::array<uint8_t, 16> BelT::u32x4_block_to_bytes(const std::array<uint32_t, 4>& block) {
+    auto b0 = u32_to_bytes(block[0]);
+    auto b1 = u32_to_bytes(block[1]);
+    auto b2 = u32_to_bytes(block[2]);
+    auto b3 = u32_to_bytes(block[3]);
+
+    std::array<uint8_t, 16> bytes = {
+        b0[0], b0[1], b0[2], b0[3],
+        b1[0], b1[1], b1[2], b1[3],
+        b2[0], b2[1], b2[2], b2[3],
+        b3[0], b3[1], b3[2], b3[3]
+    };
+    return bytes;
+}
