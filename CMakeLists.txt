@@ -13,8 +13,13 @@ add_library(BelT
 
 target_include_directories(BelT PUBLIC include)
 
-add_executable(belt_app
-    app/main.cpp
-    app/tests.cpp
+
+enable_testing()
+find_package(GTest REQUIRED)
+
+add_executable(belt_tests
+    tests/tests.cpp
 )
-target_link_libraries(belt_app PRIVATE BelT)
+target_link_libraries(belt_tests PRIVATE BelT GTest::gtest_main)
+include(GoogleTest)
+gtest_discover_tests(belt_tests)
