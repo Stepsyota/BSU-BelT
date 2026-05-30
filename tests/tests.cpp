@@ -281,7 +281,7 @@ TEST_P(BelTParameterizedTest, EncryptText) {
     auto belt = BelT::create(params.key).value();
 
     auto encrypted = belt.encrypt(params.plain, CipherMode::ECB);
-    EXPECT_TRUE(std::ranges::equal(encrypted, params.cipher));
+    ASSERT_TRUE(std::ranges::equal(encrypted, params.cipher));
 }
 
 TEST_P(BelTParameterizedTest, DecryptText) {
@@ -289,7 +289,7 @@ TEST_P(BelTParameterizedTest, DecryptText) {
     auto belt = BelT::create(params.key).value();
 
     auto decrypted = belt.decrypt(params.cipher, CipherMode::ECB);
-    EXPECT_TRUE(std::ranges::equal(decrypted, params.plain));
+    ASSERT_TRUE(std::ranges::equal(decrypted, params.plain));
 }
 
 TEST_P(BelTParameterizedTest, EncryptDecryptText) {
@@ -299,6 +299,6 @@ TEST_P(BelTParameterizedTest, EncryptDecryptText) {
     auto encrypted = belt.encrypt(params.plain, CipherMode::ECB);
     auto decrypted = belt.decrypt(encrypted, CipherMode::ECB);
 
-    EXPECT_TRUE(std::ranges::equal(encrypted, params.cipher));
-    EXPECT_TRUE(std::ranges::equal(decrypted, params.plain));
+    ASSERT_TRUE(std::ranges::equal(encrypted, params.cipher));
+    ASSERT_TRUE(std::ranges::equal(decrypted, params.plain));
 }
