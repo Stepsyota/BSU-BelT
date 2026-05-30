@@ -1,28 +1,45 @@
-// #include "../include/BelT.h"
+#include "../include/BelT.h"
 
-// void BelT::encrypt_file(const std::string& input_filename, const std::string& output_filename, const std::string& iv) {
-//     std::string plaintext = read_file(input_filename);
-//     std::string ciphertext = encrypt(plaintext, iv);
-//     write_to_file(output_filename, ciphertext);
-// }
+#include <fstream>
+#include <iterator>
+#include <stdexcept>
 
-// void BelT::decrypt_file(const std::string& input_filename, const std::string& output_filename, const std::string& iv) {
-//     std::string ciphertext = read_file(input_filename);
-//     std::string plaintext = decrypt(ciphertext, iv);
-//     write_to_file(output_filename, plaintext);
-// }
+std::vector<uint8_t> BelT::read_file(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Failed to open file for reading: " + filename);
+    }
 
-// std::string BelT::read_file(const std::string& filename) {
-//     std::ifstream file(filename, std::ios::binary);
-//     if (!file) throw std::runtime_error("Не удалось открыть файл для чтения: " + filename);
+    return std::vector<uint8_t>(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+}
 
-//     std::ostringstream ss;
-//     ss << file.rdbuf();
-//     return ss.str();
-// }
-// void BelT::write_to_file(const std::string& filename, const std::string& data) {
-//     std::ofstream file(filename, std::ios::binary);
-//     if (!file) throw std::runtime_error("Не удалось открыть файл для записи: " + filename);
+void BelT::write_to_file(const std::string& filename, std::span<const uint8_t> data) {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Failed to open file for writing: " + filename);
+    }
 
-//     file.write(data.c_str(), data.size());
-// }
+    file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
+}
+
+void BelT::encrypt_file(
+    const std::string& input_filename,
+    const std::string& output_filename,
+    CipherMode mode,
+    std::optional<std::span<const uint8_t, 16>> IV
+) {
+    auto input = read_file(input_filename);
+    auto output = encrypt(input, mode, IV);
+    write_to_file(output_filename, output);
+}
+
+void BelT::decrypt_file(
+    const std::string& input_filename,
+    const std::string& output_filename,
+    CipherMode mode,
+    std::optional<std::span<const uint8_t, 16>> IV
+) {
+    auto input = read_file(input_filename);
+    auto output = decrypt(input, mode, IV);
+    write_to_file(output_filename, output);
+}

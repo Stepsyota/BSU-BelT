@@ -2,31 +2,19 @@
 #include <array>
 #include <bit>
 #include <cstdint>
-#include <expected>
+#include <stdexcept>
 
-BelT::BelT(){
-    
+BelT::BelT(const std::array<uint8_t, KEY_128_length>& key) {
+    SetRoundKeys(key.data(), KEY_128_length);
 }
 
-std::expected<BelT, BelTError> BelT::create(const std::array<uint8_t, KEY_128_length>& key) {
-    BelT cipher;
-    cipher.SetRoundKeys(key.data(), KEY_128_length);
-    return cipher;
+BelT::BelT(const std::array<uint8_t, KEY_192_length>& key) {
+    SetRoundKeys(key.data(), KEY_192_length);
 }
 
-std::expected<BelT, BelTError> BelT::create(const std::array<uint8_t, KEY_192_length>& key) {
-    BelT cipher;
-    cipher.SetRoundKeys(key.data(), KEY_192_length);
-    return cipher;
+BelT::BelT(const std::array<uint8_t, KEY_256_length>& key) {
+    SetRoundKeys(key.data(), KEY_256_length);
 }
-
-std::expected<BelT, BelTError> BelT::create(const std::array<uint8_t, KEY_256_length>& key) {
-    BelT cipher;
-    cipher.SetRoundKeys(key.data(), KEY_256_length);
-    return cipher;
-}
-
-// create может быть лишним - лучше сделать 3 конструктора с ключами фикс длины
 
 
 std::array<uint32_t, 4> BelT::ENCRYPT_BLOCK(std::array<uint32_t, 4> X) {
@@ -92,32 +80,54 @@ std::array<uint32_t, 4> BelT::DECRYPT_BLOCK(std::array<uint32_t, 4> Y) {
 std::vector<uint8_t> BelT::encrypt(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV) {
     switch (mode) {
         case CipherMode::ECB: {
-            return BelT::ENCRYPTION_ECB(data);
+            return BelT::encrypt_ecb(data);
         }
         case CipherMode::CTR: {
             if (!IV.has_value()) {
                 throw std::runtime_error("CTR mode requires IV");  
             }
-            return BelT::ENCRYPTION_CTR(data, IV.value());
+            return BelT::encrypt_ctr(data, IV.value());
         }
         case CipherMode::MAC: {
-            return BelT::ENCRYPTION_MAC(data);
+            return BelT::encrypt_mac(data);
         }
         default:  throw std::runtime_error("Unsupported cipher mode");  
     }
 
 }
+
+std::vector<uint8_t> BelT::encrypt_ecb(std::span<const uint8_t> data) {
+    return ENCRYPTION_ECB(data);
+}
+
+std::vector<uint8_t> BelT::encrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    return ENCRYPTION_CTR(data, IV);
+}
+
+std::vector<uint8_t> BelT::encrypt_mac(std::span<const uint8_t> data) {
+    return ENCRYPTION_MAC(data);
+}
+
+
 std::vector<uint8_t> BelT::decrypt(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV) {
         switch (mode) {
         case CipherMode::ECB: {
-            return BelT::DECRYPTION_ECB(data);
+            return BelT::decrypt_ecb(data);
         }
         case CipherMode::CTR: {
             if (!IV.has_value()) {
                 throw std::runtime_error("CTR mode requires IV");  
             }
-            return BelT::DECRYPTION_CTR(data, IV.value());
+            return BelT::decrypt_ctr(data, IV.value());
         }
         default:  throw std::runtime_error("Unsupported cipher mode"); 
     }
+}
+
+std::vector<uint8_t> BelT::decrypt_ecb(std::span<const uint8_t> data) {
+    return DECRYPTION_ECB(data);
+}
+
+std::vector<uint8_t> BelT::decrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    return DECRYPTION_CTR(data, IV);
 }
