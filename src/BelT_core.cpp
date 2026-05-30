@@ -88,6 +88,12 @@ std::vector<uint8_t> BelT::encrypt(std::span<const uint8_t> data, CipherMode mod
             }
             return BelT::encrypt_ctr(data, IV.value());
         }
+        case CipherMode::CBC: {
+            if (!IV.has_value()) {
+                throw std::runtime_error("CBC mode requires IV");  
+            }
+            return BelT::encrypt_cbc(data, IV.value());
+        }
         case CipherMode::MAC: {
             return BelT::encrypt_mac(data);
         }
@@ -98,6 +104,10 @@ std::vector<uint8_t> BelT::encrypt(std::span<const uint8_t> data, CipherMode mod
 
 std::vector<uint8_t> BelT::encrypt_ecb(std::span<const uint8_t> data) {
     return ENCRYPTION_ECB(data);
+}
+
+std::vector<uint8_t> BelT::encrypt_cbc(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    return ENCRYPTION_CBC(data, IV);
 }
 
 std::vector<uint8_t> BelT::encrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
@@ -120,12 +130,22 @@ std::vector<uint8_t> BelT::decrypt(std::span<const uint8_t> data, CipherMode mod
             }
             return BelT::decrypt_ctr(data, IV.value());
         }
+        case CipherMode::CBC: {
+            if (!IV.has_value()) {
+                throw std::runtime_error("CBC mode requires IV");  
+            }
+            return BelT::decrypt_cbc(data, IV.value());
+        }
         default:  throw std::runtime_error("Unsupported cipher mode"); 
     }
 }
 
 std::vector<uint8_t> BelT::decrypt_ecb(std::span<const uint8_t> data) {
     return DECRYPTION_ECB(data);
+}
+
+std::vector<uint8_t> BelT::decrypt_cbc(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    return DECRYPTION_CBC(data, IV);
 }
 
 std::vector<uint8_t> BelT::decrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {

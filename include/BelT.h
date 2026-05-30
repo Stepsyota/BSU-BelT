@@ -14,6 +14,7 @@
 // Cipher operating modes
 enum class CipherMode {
 	ECB,    // Electronic Codebook
+	CBC, 
 	CTR,    // Counter mode
 	MAC,    // Message authentication code
 };
@@ -34,10 +35,12 @@ public:
 	std::vector<uint8_t> decrypt(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV = std::nullopt);
 
 	std::vector<uint8_t> encrypt_ecb(std::span<const uint8_t> data);
+	std::vector<uint8_t> encrypt_cbc(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> encrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> encrypt_mac(std::span<const uint8_t> data);
 
 	std::vector<uint8_t> decrypt_ecb(std::span<const uint8_t> data);
+	std::vector<uint8_t> decrypt_cbc(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> decrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 	void encrypt_file(const std::string& input_filename, const std::string& output_filename, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV = std::nullopt);
@@ -49,10 +52,12 @@ private:
 	std::array<uint32_t, 4> DECRYPT_BLOCK(std::array<uint32_t, 4> Y);
 
 	std::vector<uint8_t> ENCRYPTION_ECB(std::span<const uint8_t> data);
+	std::vector<uint8_t> ENCRYPTION_CBC(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> ENCRYPTION_CTR(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> ENCRYPTION_MAC(std::span<const uint8_t> data);
 
 	std::vector<uint8_t> DECRYPTION_ECB(std::span<const uint8_t> data);
+	std::vector<uint8_t> DECRYPTION_CBC(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> DECRYPTION_CTR(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 
