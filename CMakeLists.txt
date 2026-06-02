@@ -14,6 +14,7 @@ add_library(BelT
     src/BelT_ctr.cpp
     src/BelT_mac.cpp
     src/BelT_ccm.cpp
+    src/BelT_gcm.cpp
     src/BelT_utils.cpp
 )
 

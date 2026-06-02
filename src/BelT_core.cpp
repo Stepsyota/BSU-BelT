@@ -77,7 +77,12 @@ std::array<uint32_t, 4> BelT::DECRYPT_BLOCK(std::array<uint32_t, 4> Y) {
 
 
 
-std::vector<uint8_t> BelT::encrypt(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV) {
+std::vector<uint8_t> BelT::encrypt(
+    std::span<const uint8_t> data,
+    CipherMode mode,
+    std::optional<std::span<const uint8_t, 16>> IV,
+    std::optional<std::span<const uint8_t>> aad
+) {
     switch (mode) {
         case CipherMode::ECB: {
             return BelT::encrypt_ecb(data);
@@ -102,6 +107,13 @@ std::vector<uint8_t> BelT::encrypt(std::span<const uint8_t> data, CipherMode mod
                 throw std::runtime_error("CCM mode requires IV");
             }
             return BelT::encrypt_ccm(data, IV.value());
+        }
+        case CipherMode::GCM: {
+            if (!IV.has_value()) {
+                throw std::runtime_error("GCM mode requires IV");
+            }
+            const std::span<const uint8_t> aad_span = aad.value_or(std::span<const uint8_t>{});
+            return BelT::encrypt_gcm(data, std::span<const uint8_t>(IV->data(), IV->size()), aad_span);
         }
         default:  throw std::runtime_error("Unsupported cipher mode");  
     }
@@ -128,8 +140,17 @@ std::vector<uint8_t> BelT::encrypt_ccm(std::span<const uint8_t> data, std::span<
     return ENCRYPTION_CCM(data, IV);
 }
 
+std::vector<uint8_t> BelT::encrypt_gcm(std::span<const uint8_t> data, std::span<const uint8_t> nonce, std::optional<std::span<const uint8_t>> aad) {
+    return gcm_encrypt(data, nonce, aad);
+}
 
-std::vector<uint8_t> BelT::decrypt(std::span<const uint8_t> data, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV) {
+
+std::vector<uint8_t> BelT::decrypt(
+    std::span<const uint8_t> data,
+    CipherMode mode,
+    std::optional<std::span<const uint8_t, 16>> IV,
+    std::optional<std::span<const uint8_t>> aad
+) {
         switch (mode) {
         case CipherMode::ECB: {
             return BelT::decrypt_ecb(data);
@@ -152,6 +173,13 @@ std::vector<uint8_t> BelT::decrypt(std::span<const uint8_t> data, CipherMode mod
             }
             return BelT::decrypt_ccm(data, IV.value());
         }
+        case CipherMode::GCM: {
+            if (!IV.has_value()) {
+                throw std::runtime_error("GCM mode requires IV");
+            }
+            const std::span<const uint8_t> aad_span = aad.value_or(std::span<const uint8_t>{});
+            return BelT::decrypt_gcm(data, std::span<const uint8_t>(IV->data(), IV->size()), aad_span);
+        }
         default:  throw std::runtime_error("Unsupported cipher mode"); 
     }
 }
@@ -170,4 +198,8 @@ std::vector<uint8_t> BelT::decrypt_ctr(std::span<const uint8_t> data, std::span<
 
 std::vector<uint8_t> BelT::decrypt_ccm(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
     return DECRYPTION_CCM(data, IV);
+}
+
+std::vector<uint8_t> BelT::decrypt_gcm(std::span<const uint8_t> data, std::span<const uint8_t> nonce, std::optional<std::span<const uint8_t>> aad) {
+    return gcm_decrypt(data, nonce, aad);
 }
