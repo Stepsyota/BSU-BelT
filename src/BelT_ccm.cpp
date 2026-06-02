@@ -35,20 +35,30 @@ bool constant_time_equal(std::span<const uint8_t> left, std::span<const uint8_t>
     }
     return diff == 0;
 }
+
+std::vector<uint8_t> build_ccm_auth_input(
+    std::span<const uint8_t, IV_128_length> nonce,
+    std::span<const uint8_t> data
+) {
+    std::vector<uint8_t> auth_input;
+    auth_input.reserve(nonce.size() + sizeof(uint64_t) + data.size());
+    auth_input.insert(auth_input.end(), nonce.begin(), nonce.end());
+
+    const auto length_bytes = encode_u64_be(data.size());
+    auth_input.insert(auth_input.end(), length_bytes.begin(), length_bytes.end());
+    auth_input.insert(auth_input.end(), data.begin(), data.end());
+    return auth_input;
+}
 }
 
-std::vector<uint8_t> BelT::ENCRYPTION_CCM(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+std::vector<uint8_t> BelT::ccm_auth(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    const auto auth_input = build_ccm_auth_input(IV, data);
+    return ENCRYPTION_MAC(auth_input);
+}
+
+std::vector<uint8_t> BelT::ccm_encrypt(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    const auto tag = ccm_auth(data, IV);
     const auto ciphertext = CTR_CRYPT(data, IV);
-
-    std::vector<uint8_t> auth_input;
-    auth_input.reserve(IV.size() + sizeof(uint64_t) + ciphertext.size());
-    auth_input.insert(auth_input.end(), IV.begin(), IV.end());
-
-    const auto length_bytes = encode_u64_be(ciphertext.size());
-    auth_input.insert(auth_input.end(), length_bytes.begin(), length_bytes.end());
-    auth_input.insert(auth_input.end(), ciphertext.begin(), ciphertext.end());
-
-    const auto tag = ENCRYPTION_MAC(auth_input);
 
     std::vector<uint8_t> result;
     result.reserve(ciphertext.size() + tag.size());
@@ -57,7 +67,7 @@ std::vector<uint8_t> BelT::ENCRYPTION_CCM(std::span<const uint8_t> data, std::sp
     return result;
 }
 
-std::vector<uint8_t> BelT::DECRYPTION_CCM(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+std::vector<uint8_t> BelT::ccm_decrypt(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
     if (data.size() < ccm_tag_size) {
         throw std::invalid_argument("Incorrect text size");
     }
@@ -65,19 +75,20 @@ std::vector<uint8_t> BelT::DECRYPTION_CCM(std::span<const uint8_t> data, std::sp
     const std::size_t ciphertext_size = data.size() - ccm_tag_size;
     std::span<const uint8_t> ciphertext(data.data(), ciphertext_size);
     std::span<const uint8_t> received_tag(data.data() + ciphertext_size, ccm_tag_size);
+    const auto plaintext = CTR_CRYPT(ciphertext, IV);
 
-    std::vector<uint8_t> auth_input;
-    auth_input.reserve(IV.size() + sizeof(uint64_t) + ciphertext.size());
-    auth_input.insert(auth_input.end(), IV.begin(), IV.end());
-
-    const auto length_bytes = encode_u64_be(ciphertext.size());
-    auth_input.insert(auth_input.end(), length_bytes.begin(), length_bytes.end());
-    auth_input.insert(auth_input.end(), ciphertext.begin(), ciphertext.end());
-
-    const auto expected_tag = ENCRYPTION_MAC(auth_input);
+    const auto expected_tag = ccm_auth(plaintext, IV);
     if (!constant_time_equal(received_tag, expected_tag)) {
         throw std::runtime_error("CCM authentication failed");
     }
 
-    return CTR_CRYPT(ciphertext, IV);
+    return plaintext;
+}
+
+std::vector<uint8_t> BelT::ENCRYPTION_CCM(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    return ccm_encrypt(data, IV);
+}
+
+std::vector<uint8_t> BelT::DECRYPTION_CCM(std::span<const uint8_t> data, std::span<const uint8_t, 16> IV) {
+    return ccm_decrypt(data, IV);
 }

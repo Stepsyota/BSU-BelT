@@ -66,6 +66,9 @@ private:
 	std::vector<uint8_t> DECRYPTION_CCM(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 	std::vector<uint8_t> CTR_CRYPT(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
+	std::vector<uint8_t> ccm_auth(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
+	std::vector<uint8_t> ccm_encrypt(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
+	std::vector<uint8_t> ccm_decrypt(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 
 	uint32_t ShLo(uint32_t word, uint8_t r);
