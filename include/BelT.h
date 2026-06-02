@@ -17,6 +17,7 @@ enum class CipherMode {
 	CBC, 
 	CTR,    // Counter mode
 	MAC,    // Message authentication code
+	CCM,    // Counter with CBC-MAC
 };
 
 const uint8_t BLOCK_128_length = 16;
@@ -38,10 +39,12 @@ public:
 	std::vector<uint8_t> encrypt_cbc(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> encrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> encrypt_mac(std::span<const uint8_t> data);
+	std::vector<uint8_t> encrypt_ccm(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 	std::vector<uint8_t> decrypt_ecb(std::span<const uint8_t> data);
 	std::vector<uint8_t> decrypt_cbc(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> decrypt_ctr(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
+	std::vector<uint8_t> decrypt_ccm(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 	void encrypt_file(const std::string& input_filename, const std::string& output_filename, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV = std::nullopt);
 	void decrypt_file(const std::string& input_filename, const std::string& output_filename, CipherMode mode, std::optional<std::span<const uint8_t, 16>> IV = std::nullopt);
@@ -55,10 +58,14 @@ private:
 	std::vector<uint8_t> ENCRYPTION_CBC(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> ENCRYPTION_CTR(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> ENCRYPTION_MAC(std::span<const uint8_t> data);
+	std::vector<uint8_t> ENCRYPTION_CCM(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 	std::vector<uint8_t> DECRYPTION_ECB(std::span<const uint8_t> data);
 	std::vector<uint8_t> DECRYPTION_CBC(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 	std::vector<uint8_t> DECRYPTION_CTR(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
+	std::vector<uint8_t> DECRYPTION_CCM(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
+
+	std::vector<uint8_t> CTR_CRYPT(std::span<const uint8_t> data, std::span<const uint8_t, IV_128_length> IV);
 
 
 	uint32_t ShLo(uint32_t word, uint8_t r);

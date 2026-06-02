@@ -8,7 +8,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_library(BelT
     src/BelT_core.cpp
     src/BelT_io.cpp
-    src/BelT_modes.cpp
+    src/BelT_mode_common.cpp
+    src/BelT_ecb.cpp
+    src/BelT_cbc.cpp
+    src/BelT_ctr.cpp
+    src/BelT_mac.cpp
+    src/BelT_ccm.cpp
     src/BelT_utils.cpp
 )
 

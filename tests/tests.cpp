@@ -396,6 +396,10 @@ TEST_P(BelTParameterizedTest, DecryptText) {
         ASSERT_TRUE(params.iv.has_value());
         auto iv_span = std::span<const uint8_t, 16>(params.iv->data(), 16);
         decrypted = belt.decrypt_cbc(params.cipher, iv_span);
+    } else if (params.mode == CipherMode::CCM){
+        ASSERT_TRUE(params.iv.has_value());
+        auto iv_span = std::span<const uint8_t, 16>(params.iv->data(), 16);
+        decrypted = belt.decrypt_ccm(params.cipher, iv_span);
     }
     ASSERT_TRUE(std::ranges::equal(decrypted, params.plain));
 }
@@ -416,6 +420,11 @@ TEST_P(BelTParameterizedTest, EncryptDecryptText) {
         encrypted = belt.encrypt(params.plain, params.mode, iv_span);
         decrypted = belt.decrypt(encrypted, params.mode, iv_span);
     } else if (params.mode == CipherMode::CBC){
+        ASSERT_TRUE(params.iv.has_value());
+        auto iv_span = std::span<const uint8_t, 16>(params.iv->data(), 16);
+        encrypted = belt.encrypt(params.plain, params.mode, iv_span);
+        decrypted = belt.decrypt(encrypted, params.mode, iv_span);
+    } else if (params.mode == CipherMode::CCM){
         ASSERT_TRUE(params.iv.has_value());
         auto iv_span = std::span<const uint8_t, 16>(params.iv->data(), 16);
         encrypted = belt.encrypt(params.plain, params.mode, iv_span);
